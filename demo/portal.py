@@ -218,8 +218,8 @@ def main() -> int:
               file=sys.stderr)
         return 2
     sentinel_url = env.get("SENTINEL_URL") or "http://127.0.0.1:8080"
-    port = int(env.get("DEMO_PORT") or 8081)
-    server = create_portal("127.0.0.1", port, sentinel_url, portal_key, admin_key)
+    port = int(env.get("PORT") or env.get("DEMO_PORT") or 8081)
+    server = create_portal("0.0.0.0", port, sentinel_url, portal_key, admin_key)
     print(f"demo portal: open http://127.0.0.1:{port}/  (Sentinel at {sentinel_url})", flush=True)
     try:
         server.serve_forever()
