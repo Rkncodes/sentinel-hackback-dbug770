@@ -66,10 +66,16 @@
   .badge.bad { color: var(--bad); border: 1px solid var(--bad-line); background: var(--bad-bg); }
 
   /* panels */
-  .grid { display: grid; grid-template-columns: minmax(300px, 380px) 1fr; gap: 16px; align-items: start; }
-  .side { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; }
+  .sim-top { display: grid; grid-template-columns: minmax(300px, 400px) 1fr; gap: 18px; }
+  .sim-top > .result { margin-top: 0; }
+  .side { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px;
+          margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--line); }
+  .panel.nested { background: var(--panel-2); border-radius: 10px; padding: 14px 16px; }
+  .nested h2 { font-size: 11px; }
+  .nested input { background: #080c12; }
+  .nested .result:not(.ok):not(.bad):not(.warn) { background: rgba(0, 0, 0, .25); }
   .two { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; margin-top: 16px; }
-  @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } .hero h1 { font-size: 27px; } }
+  @media (max-width: 860px) { .sim-top, .side { grid-template-columns: 1fr; } .hero h1 { font-size: 27px; } }
   .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; min-width: 0; }
   .panel h2 { margin: 0; font-size: 12px; font-weight: 700; letter-spacing: .18em; color: var(--text); }
   .panel .sub { font-size: 12px; color: var(--dim); letter-spacing: .08em; margin: 2px 0 10px; text-transform: uppercase; }
@@ -106,6 +112,20 @@
   th { text-align: left; padding: 6px 10px; font-size: 10px; letter-spacing: .14em; color: var(--muted); font-weight: 600; border-bottom: 1px solid var(--line-2); }
   td { padding: 8px 10px; border-bottom: 1px solid var(--line); font-family: var(--mono); font-size: 12px; }
   .head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+  button:disabled { opacity: .55; cursor: default; }
+  button:disabled:hover { background: #18212f; border-color: var(--line-2); }
+  /* AI incident brief: part of the ADMIN panel, quiet until used */
+  .brief { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
+  .brief .head { margin-bottom: 0; flex-wrap: wrap; }
+  .brief h3 { margin: 0; font-size: 11px; font-weight: 700; letter-spacing: .18em; color: var(--muted); }
+  .brief .hint { font-size: 13px; color: var(--dim); }
+  .brief .out { margin-top: 12px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel-2); }
+  .brief .cap { font-size: 10px; font-weight: 700; letter-spacing: .16em; color: var(--muted); }
+  .brief .text { margin: 4px 0 10px; font-size: 14px; line-height: 1.55; color: var(--text); max-width: 900px; }
+  .brief .meta { display: flex; flex-wrap: wrap; gap: 6px 22px; font-size: 12px; color: var(--muted); }
+  .brief .meta b { font-family: var(--mono); font-weight: 600; color: var(--text); margin-left: 6px; overflow-wrap: anywhere; }
+  .brief .src { margin-top: 10px; font-size: 11px; letter-spacing: .06em; color: var(--dim); }
+  .brief .src.groq { color: var(--accent); }
   pre, #log { font: 12px/1.5 var(--mono); background: #070a0f; color: #c9d3e0; border: 1px solid var(--line); border-radius: 8px;
               padding: 10px 12px; margin: 8px 0 0; height: 250px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
   #log .bad { color: #ff9a9a; } #log .ok { color: #7fe6b6; } #log .warn { color: #ffcb6b; }
@@ -131,27 +151,28 @@
 
 <section class="hero" id="hero" aria-live="polite"></section>
 
-<div class="grid">
-
-  <div class="panel">
-    <h2>ATTACK SIMULATOR</h2>
-    <div class="sub">ATTACKER · failed and guessed logins</div>
-    <div class="fields">
-      <label class="field">ACCOUNT <input id="attackUser" value="student" spellcheck="false"></label>
-      <label class="field">SOURCE IP <input id="ipA" value="203.0.113.7" spellcheck="false"></label>
+<div class="panel">
+  <h2>ATTACK SIMULATOR</h2>
+  <div class="sub">ATTACKER · failed and guessed logins</div>
+  <div class="sim-top">
+    <div>
+      <div class="fields">
+        <label class="field">ACCOUNT <input id="attackUser" value="student" spellcheck="false"></label>
+        <label class="field">SOURCE IP <input id="ipA" value="203.0.113.7" spellcheck="false"></label>
+      </div>
+      <div class="counter"><span class="n" id="count">0</span><span class="l">failed logins sent<br>from this address</span></div>
+      <div class="btns">
+        <button id="btnFail1" onclick="attack(1)">+1 failed login</button>
+        <button id="btnFail5" onclick="attack(5)">+5 failed logins</button>
+        <button id="btnFail10" onclick="attack(10)">+10 failed logins</button>
+      </div>
+      <button class="primary" id="btnGuess" onclick="luckyGuess()">Sign in with the correct password</button>
     </div>
-    <div class="counter"><span class="n" id="count">0</span><span class="l">failed logins sent<br>from this address</span></div>
-    <div class="btns">
-      <button id="btnFail1" onclick="attack(1)">+1 failed login</button>
-      <button id="btnFail5" onclick="attack(5)">+5 failed logins</button>
-      <button id="btnFail10" onclick="attack(10)">+10 failed logins</button>
-    </div>
-    <button class="primary" id="btnGuess" onclick="luckyGuess()">Sign in with the correct password</button>
     <div class="result" id="attackResult">No attempts yet. The 10th failure inside the window bans the address. A correct guess before that is allowed, but flagged.</div>
   </div>
 
   <div class="side">
-    <div class="panel">
+    <div class="panel nested">
       <h2>EXISTING SESSION</h2>
       <div class="sub">Source IP · context=session</div>
       <p>A student who signed in from the same address <b>before</b> the attack.</p>
@@ -162,7 +183,7 @@
       <div class="result" id="sessionResult">No session yet.</div>
     </div>
 
-    <div class="panel">
+    <div class="panel nested">
       <h2>NEW LOGIN</h2>
       <div class="sub">Source IP · context=login</div>
       <p>Someone on the same address who is not signed in, with the <b>correct</b> password.</p>
@@ -170,7 +191,7 @@
       <div class="result" id="loginResult">Not tried yet.</div>
     </div>
 
-    <div class="panel">
+    <div class="panel nested">
       <h2>LEGITIMATE USER</h2>
       <div class="sub">A different address</div>
       <label class="field">OTHER IP <input id="ipB" value="198.51.100.20" spellcheck="false"></label>
@@ -181,7 +202,6 @@
       <div class="result" id="legitResult">Not tried yet.</div>
     </div>
   </div>
-
 </div>
 
 <div class="panel" style="margin-top:16px">
@@ -193,6 +213,22 @@
     <thead><tr><th>IP</th><th>TRIGGERED</th><th>EXPIRES</th><th>EVIDENCE</th><th></th></tr></thead>
     <tbody id="bans"><tr><td colspan="5" class="muted">No active bans.</td></tr></tbody>
   </table></div>
+
+  <div class="brief">
+    <div class="head">
+      <div>
+        <h3>AI INCIDENT BRIEF</h3>
+        <div class="hint">Turn the current security event into a concise administrator summary.</div>
+      </div>
+      <button id="btnBrief" onclick="generateBrief()">✦ Generate incident brief</button>
+    </div>
+    <div class="out" id="briefOut" hidden>
+      <div class="cap">INCIDENT BRIEF</div>
+      <p class="text" id="briefText"></p>
+      <div class="meta" id="briefMeta"></div>
+      <div class="src" id="briefSrc"></div>
+    </div>
+  </div>
 </div>
 
 <div class="two">
@@ -565,11 +601,78 @@ async function unban(b) {
   refreshAdmin();
 }
 
+/* ---------- ADMIN: AI incident brief (informational; Sentinel decides, the brief only describes) ---------- */
+
+const BRIEF_LABEL = '✦ Generate incident brief';
+const BRIEF_ACTIONS = { ip_banned: 'IP automatically banned', login_allowed_and_flagged: 'Login allowed and flagged', none: 'No action taken' };
+const BRIEF_STATUS = { banned: 'Active', flagged: 'Flagged', monitoring: 'Monitoring', clear: 'Clear' };
+let briefBusy = false, briefExpiresMs = null;
+
+async function generateBrief() {
+  if (briefBusy) return;
+  const button = $('btnBrief');
+  briefBusy = true;
+  button.disabled = true;
+  button.textContent = 'Generating incident brief...';
+  try {
+    const r = await call('POST', '/api/admin/incident-brief', { ip: ipA() });
+    if (r.outcome === 'ok') renderBrief(r.sentinel[0].response);
+    else renderBriefUnavailable();
+  } finally {
+    briefBusy = false;
+    button.disabled = false;
+    button.textContent = BRIEF_LABEL;
+  }
+}
+
+function renderBrief(b) {
+  const f = b.facts, meta = $('briefMeta');
+  $('briefText').textContent = b.brief;
+  briefExpiresMs = f.ban ? Date.parse(f.ban.expires_at) : null;
+  meta.replaceChildren();
+  for (const [name, value, id] of [
+    ['Action:', BRIEF_ACTIONS[f.action] || f.action],
+    ['Status:', BRIEF_STATUS[f.status] || f.status],
+    ['Source IP:', f.source_ip],
+    ['Expires:', f.ban ? '' : '—', 'briefExpires'],
+  ]) {
+    const item = el('span', '', name), v = el('b', '', value);
+    if (id) v.id = id;
+    item.append(v);
+    meta.append(item);
+  }
+  const src = $('briefSrc');
+  src.className = 'src' + (b.source === 'groq' ? ' groq' : '');
+  src.textContent = (b.source === 'groq' ? 'Generated by Groq' : 'AI unavailable — deterministic incident summary shown.') +
+    '  ·  as of ' + new Date().toLocaleTimeString('en-GB');
+  $('briefOut').hidden = false;
+  tickBrief();
+  log('ADMIN  incident brief for ' + f.source_ip + ' (' + (b.source === 'groq' ? 'Groq' : 'deterministic summary') + ')');
+}
+
+function renderBriefUnavailable() {
+  briefExpiresMs = null;
+  $('briefText').textContent = 'The incident brief could not be produced because Sentinel did not answer. Detection and bans are unaffected.';
+  $('briefMeta').replaceChildren();
+  $('briefSrc').className = 'src';
+  $('briefSrc').textContent = 'No summary available.';
+  $('briefOut').hidden = false;
+}
+
+function tickBrief() {
+  const node = $('briefExpires');
+  if (!node || briefExpiresMs === null) return;
+  const ms = briefExpiresMs - Date.now();
+  node.textContent = ms > 0 ? Math.ceil(ms / 1000) + 's' : 'expired';
+}
+setInterval(tickBrief, 250);
+
 /* ---------- simulated IPs ---------- */
 
 $('ipA').addEventListener('change', () => {
   sent = 0; ban = null; flag = null; recovered = null; sessionToken = null;
   result('sessionResult', '', '', 'No session yet.');
+  $('briefOut').hidden = true;   // the brief described the previous address
   log('Source IP is now ' + ipA());
   refreshBan(true);
 });

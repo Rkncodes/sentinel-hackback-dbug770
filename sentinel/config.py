@@ -1,6 +1,6 @@
 """Configuration, read once at start-up from environment variables."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 class ConfigError(Exception):
@@ -20,6 +20,11 @@ class Config:
     db_path: str = "./sentinel.db"
     host: str = "127.0.0.1"
     port: int = 8080
+    # Optional AI incident brief. Without a key the deterministic summary is used.
+    # The key is kept out of repr() so it cannot end up in a log line.
+    groq_api_key: str = field(default="", repr=False)
+    groq_model: str = "openai/gpt-oss-20b"
+    groq_base_url: str = "https://api.groq.com/openai/v1"
 
     def __post_init__(self):
         for name in ("threshold", "window_seconds", "ban_duration_seconds"):
@@ -63,4 +68,7 @@ class Config:
             db_path=env.get("SENTINEL_DB_PATH") or "./sentinel.db",
             host=env.get("SENTINEL_HOST") or "127.0.0.1",
             port=integer("SENTINEL_PORT", 8080),
+            groq_api_key=(env.get("GROQ_API_KEY") or "").strip(),
+            groq_model=env.get("GROQ_MODEL") or "openai/gpt-oss-20b",
+            groq_base_url=env.get("GROQ_BASE_URL") or "https://api.groq.com/openai/v1",
         )

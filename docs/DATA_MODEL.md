@@ -32,7 +32,7 @@ The input message for one login. It is never stored as its own record.
 | `received_at` | Timestamp | Set by Sentinel | The moment Sentinel received the report. Never supplied by the caller. |
 
 What happens to it:
-- **Success:** nothing is kept. Successes never count and never reset the count. (Extension: the IP's Failure Window is read, not changed, to decide whether the answer carries a success alert; see [API.md](API.md).)
+- **Success:** nothing is kept. Successes never count and never reset the count. (Extension: the IP's Failure Window is read, not changed, to decide whether the answer carries a success alert; see [API.md](API.md). If the alert fires, its time and failure count are remembered in memory for that IP, without the username, so that the optional incident brief can mention it. This note is not persisted and is dropped once it can no longer matter.)
 - **Failure, IP not banned:** `received_at` and `username` are added to the IP's Failure Window.
 - **Any report from a banned IP:** nothing is kept. It does not extend the ban or trigger another.
 
@@ -140,6 +140,8 @@ Rules:
 | `window_seconds` | 60 | Length of the sliding window |
 | `ban_duration_seconds` | 900 | How long a ban lasts (15 minutes) |
 | `success_alert_threshold` | 5 | Extension. Failures in the window for the same IP and username at or above which a following success is answered with a warning. Not part of a ban's `rule`. Must be lower than `threshold`; a value at or above it is rejected at start-up, because a window never holds that many failures without a ban. When not set it is 5, or one below `threshold` if that is lower |
+
+Two further settings belong to the optional AI incident brief and affect nothing else: `groq_api_key` (empty by default, which means the deterministic summary is always used) and `groq_model`. The key is never stored in a Ban, returned by the API or written to a log.
 
 A change of Config applies to bans created afterwards. Existing bans keep their own `expires_at` and their own `rule` snapshot.
 

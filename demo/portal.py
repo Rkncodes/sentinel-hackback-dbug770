@@ -31,7 +31,7 @@ class SentinelClient:
         self.base_url = base_url.rstrip("/")
         self.portal_key, self.admin_key = portal_key, admin_key
 
-    def call(self, method: str, path: str, key: str, body=None) -> dict:
+    def call(self, method: str, path: str, key: str, body=None, timeout: float = 3) -> dict:
         """One Sentinel call, returned as a record the page can display."""
         data = json.dumps(body).encode() if body is not None else None
         req = urllib.request.Request(self.base_url + path, data=data, method=method)
@@ -39,7 +39,7 @@ class SentinelClient:
         if data is not None:
             req.add_header("Content-Type", "application/json")
         try:
-            with urllib.request.urlopen(req, timeout=3) as resp:
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
                 status, answer = resp.status, json.loads(resp.read())
         except urllib.error.HTTPError as exc:
             if exc.code >= 500:
@@ -137,6 +137,12 @@ class Portal:
         return self._passthrough(lambda: self.client.call(
             "DELETE", f"/v1/bans/{ban_id}", self.client.admin_key))
 
+    def admin_incident_brief(self, ip: str) -> dict:
+        # Sentinel builds the facts and, if configured, asks Groq. The portal only
+        # relays the answer, so no AI key ever reaches this process or the browser.
+        return self._passthrough(lambda: self.client.call(
+            "POST", "/v1/incident-brief", self.client.admin_key, {"ip": ip}, timeout=15))
+
     @staticmethod
     def _passthrough(call) -> dict:
         try:
@@ -191,6 +197,8 @@ class Handler(BaseHTTPRequestHandler):
             self._json(portal.session_request(field("ip"), field("token")))
         elif self.path == "/api/admin/unban":
             self._json(portal.admin_unban(field("id")))
+        elif self.path == "/api/admin/incident-brief":
+            self._json(portal.admin_incident_brief(field("ip")))
         else:
             self._json({"outcome": "error", "message": "not found"}, 404)
 

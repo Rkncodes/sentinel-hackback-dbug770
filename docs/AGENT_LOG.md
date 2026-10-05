@@ -287,3 +287,40 @@ State at the end of Session 5: 104 automated tests passing (the 76 from Session 
 
 - [PRD.md](PRD.md) section 9 and [GAPS.md](GAPS.md) still say the rebuild carries "exactly two improvements". That wording was kept on purpose: it describes the two required improvements, and each file now carries a separate note for the extension.
 - When checking the demo, an older Sentinel process was found still listening on port 8080. On Windows a second instance can bind the same port without an error, so requests may reach the older process. Stop old instances before a demonstration.
+
+## Session 6 — Optional layer: AI incident brief
+
+### What and why
+
+Added on top of the committed build (`45af6f2`) as an optional polish layer for administrators:
+
+> An optional AI-powered incident briefing layer that converts Sentinel's structured security facts into a concise administrator-readable summary.
+
+### What this is not
+
+- **Not a required improvement, not the Differentiator, not the extension.** Those are unchanged: Improvement 1, Improvement 2 and the success alert.
+- **Not a decision-maker.** Sentinel's deterministic rules remain the sole authority. The brief is produced after the fact, only reads state, and is never read back.
+- **No claim is made about CrowdSec.** Whether the original or its ecosystem offers AI summaries was not examined.
+
+### Design
+
+| Point | Decision |
+|---|---|
+| Endpoint | `POST /v1/incident-brief`, admin key, body `{ "ip": ... }`. Answer: `source`, `brief`, `facts` |
+| Facts | Gathered by Sentinel from its own state. Only the address is taken from the caller. No usernames, evidence or secrets |
+| Groq | Called from the backend through the standard library (`urllib`), OpenAI-compatible chat endpoint, 8-second timeout. No package was installed |
+| Model | `GROQ_MODEL`, default `openai/gpt-oss-20b` (changed from `llama-3.3-70b-versatile` after the team tested the Groq API directly) |
+| Fallback | No key, a failed or timed-out request, or unusable output all give a deterministic summary of the same facts, with `source: "fallback"` and HTTP 200 |
+| Output | Model text is validated and stripped of markup before it is returned |
+| Key | Read from `GROQ_API_KEY`. Kept out of responses, logs and `repr()`; never sent to the demo portal or the browser |
+| Demo | A compact "AI INCIDENT BRIEF" block inside the existing ADMIN panel |
+
+### One change to earlier behavior, stated plainly
+
+Until this session the success alert left no trace. So that a brief can mention it, Sentinel now remembers the time and failure count of the last alert per IP, in memory only and without the username. The alert's answer, and every ban, count and check, are unchanged. Wording that said the alert "stores nothing" was corrected to "persists nothing" in `README.md`, `SUBMISSION.md`, `ARCHITECTURE.md`, `PRD.md` and `GAPS.md`. `deck.pdf` was regenerated afterwards: it now states 137 tests, shows the success alert and the AI incident brief as two post-specification extensions beside the two required improvements, and no longer says "stored".
+
+### Verification
+
+- 33 automated tests in `tests/test_incident_brief.py` (29 at first, 4 added with the request fix for reasoning models); no existing test was changed. Total: 137 passing.
+- The Groq HTTP call is mocked in the automated tests. **No request was made to the real Groq API in this session, because no key was available.** The default model name is therefore unverified against the live service; if it is wrong or retired, the fallback is used.
+- The page was driven in headless Edge: once with Groq replaced by a local stand-in server (loading state, repeated clicks producing one request, each incident state, what was sent to the model) and once with no key (fallback label). The existing demo flow was re-run as a regression check.

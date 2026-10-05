@@ -63,11 +63,24 @@ A session check writes nothing and never changes the ban. There is no bypass: a 
 
 Added on top of the two improvements; it is neither the fix nor the Differentiator.
 
-**Sentinel extension: successful-authentication alert following repeated failures for the same account and source address.** A threshold ban only catches an attacker who keeps failing. When a `success` report follows at least 5 failures (configurable) for the same username from the same IP inside the 60-second window, Sentinel's answer carries a `warning` with a code, a fixed message and the number of failures. It is advisory: nothing is banned, counted, stored or reset, and a banned IP still gets the normal "banned" answer. The warning contains no username and no failure history.
+**Sentinel extension: successful-authentication alert following repeated failures for the same account and source address.** A threshold ban only catches an attacker who keeps failing. When a `success` report follows at least 5 failures (configurable) for the same username from the same IP inside the 60-second window, Sentinel's answer carries a `warning` with a code, a fixed message and the number of failures. It is advisory: nothing is banned, counted, persisted or reset, and a banned IP still gets the normal "banned" answer. The warning contains no username and no failure history.
 
 **No claim about the original.** We did not examine whether CrowdSec, its hub content or its bouncers can do this, and we do not say it is absent. It was added after the specification was finalized and is recorded as such in [docs/AGENT_LOG.md](docs/AGENT_LOG.md), Session 5.
 
 **Verified by:** [tests/test_success_alert.py](tests/test_success_alert.py), 27 tests, plus one demo test.
+
+## Optional layer — AI incident brief
+
+Not a required improvement, not the Differentiator and not the extension above. Those are unchanged.
+
+An optional AI-powered incident briefing layer that converts Sentinel's structured security facts into a concise administrator-readable summary. An administrator calls `POST /v1/incident-brief` for an IP (the demo has a button in its ADMIN panel). Sentinel gathers the facts from its own state and, if `GROQ_API_KEY` is configured, asks Groq to summarize them; otherwise, or if Groq fails or times out, it returns a deterministic summary of the same facts. The answer says which one was used.
+
+- **The AI makes no security decision.** Sentinel's deterministic rules remain the sole authority; the brief is written after the fact and nothing reads it back.
+- **Sentinel works fully without it.** No key is needed to run, test or demonstrate anything else.
+- **The key stays on the server**, and the facts sent contain no usernames, evidence or secrets.
+- **No claim about the original.** We did not examine whether CrowdSec or its ecosystem offers AI summaries.
+
+**Verified by:** [tests/test_incident_brief.py](tests/test_incident_brief.py), 33 tests, with the Groq call mocked. Separately, the `openai/gpt-oss-20b` model was verified directly against the real Groq API during final integration testing, and Sentinel's request settings were set from what that test showed. A complete incident brief generated through the running application with a live key has not yet been confirmed end to end. Groq remains optional: without a key, or whenever Groq is unavailable, the application uses the deterministic fallback.
 
 ## Technologies and libraries
 
@@ -78,6 +91,7 @@ Added on top of the two improvements; it is neither the fix nor the Differentiat
 | HTTP server | `http.server` (`ThreadingHTTPServer`) |
 | Storage | SQLite through the standard `sqlite3` module, one file, bans only |
 | In-memory state | Failure windows, in a dictionary guarded by locks (`threading`) |
+| Optional AI brief | Groq's OpenAI-compatible HTTP API, called with the standard `urllib`. No SDK or package |
 | Tests | `unittest` |
 | Demo | A standard-library mock portal and one HTML page with plain JavaScript |
 
@@ -91,7 +105,7 @@ Command:
 python -m unittest discover -s tests -t . -v
 ```
 
-Result: **104 tests, all passing** (Python 3.12 on Windows 11).
+Result: **137 tests, all passing** (Python 3.12 on Windows 11).
 
 | File | Tests |
 |---|---|
@@ -101,6 +115,7 @@ Result: **104 tests, all passing** (Python 3.12 on Windows 11).
 | tests/test_improvement1.py | 8 |
 | tests/test_improvement2.py | 10 |
 | tests/test_success_alert.py | 27 |
+| tests/test_incident_brief.py | 33 |
 | tests/test_demo.py | 6 |
 
 Time-dependent tests use a fake clock injected by the test harness; Sentinel has no public endpoint for controlling time. The demo tests use the real clock with a 3-second ban. The demo page itself was verified by driving the portal endpoints its buttons call; there is no automated browser test.

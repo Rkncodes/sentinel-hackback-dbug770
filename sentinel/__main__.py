@@ -30,7 +30,9 @@ def main() -> int:
         f"sentinel: listening on http://{config.host}:{server.server_address[1]} "
         f"(threshold={config.threshold}, window={config.window_seconds}s, "
         f"ban={config.ban_duration_seconds}s, "
-        f"success_alert={config.success_alert_threshold or 'off'}, db={config.db_path})",
+        f"success_alert={config.success_alert_threshold or 'off'}, "
+        f"ai_brief={'groq:' + config.groq_model if config.groq_api_key else 'fallback only'}, "
+        f"db={config.db_path})",
         flush=True,
     )
     try:

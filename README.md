@@ -65,9 +65,22 @@ A threshold only catches an attacker who keeps failing. If the right password is
 }
 ```
 
-The alert fires at 5 such failures inside the 60-second window (configurable; it must be lower than the ban threshold, and a setting that could never fire is rejected at start-up). It is advisory: nothing is banned, counted, stored or reset, and what to do with it is the portal's decision. Failures for other accounts or from other addresses do not contribute, a report without a username never produces it, and a banned IP still gets the normal "banned" answer. The warning contains no username and no failure history.
+The alert fires at 5 such failures inside the 60-second window (configurable; it must be lower than the ban threshold, and a setting that could never fire is rejected at start-up). It is advisory: nothing is banned, counted, persisted or reset, and what to do with it is the portal's decision. Failures for other accounts or from other addresses do not contribute, a report without a username never produces it, and a banned IP still gets the normal "banned" answer. The warning contains no username and no failure history.
 
 This is an extension added on top of the two improvements. It is not the Differentiator, and we make no claim about whether CrowdSec offers something similar; that was not examined.
+
+## Optional: AI incident brief
+
+An optional AI-powered incident briefing layer that converts Sentinel's structured security facts into a concise administrator-readable summary.
+
+`POST /v1/incident-brief` (admin key) takes an IP and returns a two-to-four-sentence brief with the facts it was written from. Sentinel gathers the facts from its own state: ban status and expiry, failed attempts, the rule values, and whether a flagged success occurred. No usernames, evidence or secrets are included.
+
+- **With `GROQ_API_KEY` set**, Sentinel sends those facts to Groq and returns the validated text (`"source": "groq"`).
+- **Without a key, or if Groq fails or times out**, the same endpoint returns a deterministic summary of the same facts (`"source": "fallback"`). Sentinel works fully without Groq.
+- **The AI never decides anything.** Detection, bans and expiry are Sentinel's deterministic rules alone; the brief only describes what they did, and nothing reads it back.
+- **The key stays on the server.** It is never returned by the API, logged, or sent to the demo portal or the browser.
+
+The Groq call uses the standard library, so there is still nothing to install. It is an optional layer: not a required improvement, not the Differentiator, and we make no claim about whether CrowdSec offers something similar.
 
 ## Architecture
 
@@ -84,6 +97,7 @@ This is an extension added on top of the two improvements. It is not the Differe
 | `GET /v1/check` | portal | Ask whether a request from an IP may proceed |
 | `GET /v1/bans` | admin | List bans with their evidence |
 | `DELETE /v1/bans/{id}` | admin | Lift a ban early (idempotent) |
+| `POST /v1/incident-brief` | admin | Optional: administrator summary of one IP's current state |
 
 Major design decisions (full list in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)):
 
@@ -144,14 +158,15 @@ python demo/portal.py
 
 Open `http://127.0.0.1:8081/` and click in this order:
 
-1. **EXISTING SESSION** → "1. Sign in on IP A (before the attack)".
-2. **ATTACKER** → "Send 5 failed logins", then "Guess the correct password". Signed in, with an amber security alert: no ban fired, but the success is flagged.
-3. **ATTACKER** → "Send 5 failed logins" again. The success reset nothing, so the 10th failure triggers the ban; the ban card shows the explanation and a countdown.
-4. **LEGITIMATE USER** → sign in on IP B and check it. Unaffected.
-5. **EXISTING SESSION** → "2. Use the existing session". Allowed while banned.
-6. **NEW LOGIN** → blocked, even with the correct password, with the explanation shown.
-7. Wait for the countdown. The page re-checks just before and at `expires_at`, and the IP becomes unblocked.
-8. **ADMIN** → ban the IP again, then "Unban".
+1. **EXISTING SESSION** → "1 · Sign in (before the attack)".
+2. **ATTACK SIMULATOR** → "+5 failed logins", then "Sign in with the correct password". The state card turns amber: signed in, but flagged. No ban fired.
+3. **ATTACK SIMULATOR** → "+5 failed logins" again. The success reset nothing, so the 10th failure triggers the ban; the state card turns red with a countdown.
+4. **LEGITIMATE USER** → "Sign in" and "Check address" on the other IP. Unaffected.
+5. **EXISTING SESSION** → "2 · Use the session". Allowed while banned.
+6. **NEW LOGIN** → "Try a new sign-in". Blocked, even with the correct password, with the explanation shown.
+7. **ADMIN** → "✦ Generate incident brief" for a short summary of the incident (Groq if `GROQ_API_KEY` is set for Sentinel, the deterministic summary otherwise).
+8. Wait for the countdown. The page re-checks just before and at `expires_at`, and the state card returns to green.
+9. **ADMIN** → ban the IP again, then "Unban".
 
 Do steps 2 and 3 within 60 seconds of each other, or the first failures leave the window. Before starting, make sure no older Sentinel is still running on port 8080.
 
@@ -163,7 +178,7 @@ The client IPs are simulated: the page sends whatever is typed in the two IP fie
 python -m unittest discover -s tests -t . -v
 ```
 
-104 tests. `python -m unittest` runs the same suite.
+137 tests. `python -m unittest` runs the same suite. No test calls the real Groq API; that call is mocked.
 
 | File | Tests | Covers |
 |---|---|---|
@@ -173,6 +188,7 @@ python -m unittest discover -s tests -t . -v
 | [tests/test_improvement1.py](tests/test_improvement1.py) | 8 | Session checks allowed, new logins blocked, no bypass, ban unchanged |
 | [tests/test_improvement2.py](tests/test_improvement2.py) | 10 | Explanation contents, rounding, exact disappearance at expiry, nothing leaked |
 | [tests/test_success_alert.py](tests/test_success_alert.py) | 27 | Extension: alert at the threshold, per account and per address, window boundary, nothing changed or leaked |
+| [tests/test_incident_brief.py](tests/test_incident_brief.py) | 33 | Optional AI brief: facts, fallback, mocked Groq success and failure, key never exposed, security state unchanged |
 | [tests/test_demo.py](tests/test_demo.py) | 6 | The demo portal against a real Sentinel with the real clock and a 3-second ban |
 
 ## Repository structure
@@ -187,6 +203,7 @@ sentinel/    The service. API only.
   clock.py     The single clock and timestamp format
   config.py    Environment configuration
   ips.py       Canonical IP form
+  brief.py     Optional AI incident brief: Groq client and deterministic fallback
 demo/        Mock portal and its one-page UI. A client of the API.
 tests/       The automated suite.
 deck.pdf     Five-slide summary.

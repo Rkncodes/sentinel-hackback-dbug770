@@ -162,12 +162,14 @@ Both improvements are additions. Neither changes the result of any Killer Test.
 
 Added after this specification was finalized and after the core and both improvements were built and tested. It is recorded here for transparency; see [AGENT_LOG.md](AGENT_LOG.md), Session 5.
 
-**Sentinel extension: successful-authentication alert following repeated failures for the same account and source address.** When a successful login report follows at least 5 failed attempts (configurable, and always lower than the ban threshold) for the same username from the same IP inside the window, Sentinel's answer carries a warning for the portal. The alert is advisory: it bans nothing, counts nothing, stores nothing and resets nothing, and a banned IP is still answered "banned".
+**Sentinel extension: successful-authentication alert following repeated failures for the same account and source address.** When a successful login report follows at least 5 failed attempts (configurable, and always lower than the ban threshold) for the same username from the same IP inside the window, Sentinel's answer carries a warning for the portal. The alert is advisory: it bans nothing, counts nothing, persists nothing and resets nothing, and a banned IP is still answered "banned".
 
 - It is **not** a third required improvement. The required improvements remain exactly the two in the table above, unchanged.
 - It is **not** the Differentiator, and it is not derived from a gap in [GAPS.md](GAPS.md).
 - We make **no claim** about whether CrowdSec has an equivalent. That was not examined.
 - It leaves FR-4 intact: a success still never counts toward a ban and never resets the count. The contract is in [API.md](API.md), "The Warning object".
+
+**Optional AI incident brief.** Added later still ([AGENT_LOG.md](AGENT_LOG.md), Session 6). An optional AI-powered incident briefing layer that converts Sentinel's structured security facts into a concise administrator-readable summary. Groq is used when a key is configured; otherwise a deterministic summary of the same facts is returned. It is informational only: Sentinel's deterministic rules remain the sole authority for every decision, and the service behaves identically without it. Like the extension above, it is not a required improvement, not the Differentiator, not derived from a gap, and carries no claim about CrowdSec.
 
 ### Not planned
 

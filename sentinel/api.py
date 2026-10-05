@@ -5,6 +5,7 @@ import json
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlsplit
 
+from .brief import GroqBriefer, incident_brief
 from .clock import SystemClock, format_ms
 from .config import Config
 from .ips import InvalidIP, canonical_ip
@@ -101,6 +102,9 @@ class Handler(BaseHTTPRequestHandler):
             if ban_id and "/" not in ban_id:
                 self._authenticate(ADMIN)
                 return self._revoke(ban_id)
+        if method == "POST" and path == "/v1/incident-brief":
+            self._authenticate(ADMIN)
+            return self._incident_brief()
         raise ApiError(404, "not_found", "no such endpoint")
 
     def _authenticate(self, role: str):
@@ -206,19 +210,32 @@ class Handler(BaseHTTPRequestHandler):
         return ban_json(ban, now, True)
 
 
+    def _incident_brief(self) -> dict:
+        body = self._json_body()
+        if "ip" not in body:
+            raise _invalid("ip is required")
+        # Only the address comes from the caller. The facts are Sentinel's own, and the
+        # brief is informational: it never feeds back into detection or bans.
+        facts = self.server.sentinel.incident_facts(_ip(body["ip"]))
+        return incident_brief(facts, self.server.briefer)
+
+
 class SentinelServer(ThreadingHTTPServer):
     daemon_threads = True
     request_queue_size = 128
 
-    def __init__(self, address, sentinel: Sentinel):
+    def __init__(self, address, sentinel: Sentinel, briefer=None):
         super().__init__(address, Handler)
         self.sentinel = sentinel
+        self.briefer = briefer  # None: the deterministic summary is always used
 
     def server_close(self):
         super().server_close()
         self.sentinel.close()
 
 
-def create_server(config: Config, clock=None) -> SentinelServer:
+def create_server(config: Config, clock=None, briefer=None) -> SentinelServer:
     sentinel = Sentinel(config, BanStore(config.db_path), clock or SystemClock())
-    return SentinelServer((config.host, config.port), sentinel)
+    if briefer is None and config.groq_api_key:
+        briefer = GroqBriefer(config.groq_api_key, config.groq_model, config.groq_base_url)
+    return SentinelServer((config.host, config.port), sentinel, briefer)

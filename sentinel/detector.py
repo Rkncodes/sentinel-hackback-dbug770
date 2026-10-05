@@ -27,6 +27,11 @@ class Detector:
             failures = self._fresh(self._windows.get(ip, ()), now_ms)
         return sum(1 for f in failures if f["username"] == username)
 
+    def count_all(self, ip: str, now_ms: int) -> int:
+        """Every failure for this IP still inside the window. Changes nothing."""
+        with self._mutex:
+            return len(self._fresh(self._windows.get(ip, ()), now_ms))
+
     def clear(self, ip: str) -> None:
         with self._mutex:
             self._windows.pop(ip, None)

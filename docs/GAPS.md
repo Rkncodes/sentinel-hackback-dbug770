@@ -166,7 +166,7 @@ Specified as FR-14 in [PRD.md](PRD.md), D-16 in [ARCHITECTURE.md](ARCHITECTURE.m
 
 Added after this file was finalized. It does not change anything above: the rebuild's two required improvements remain Improvement 1 (section 2) and Improvement 2 (section 3).
 
-**Sentinel extension: successful-authentication alert following repeated failures for the same account and source address.** When a successful login follows repeated failed attempts for the same username from the same IP inside the window, Sentinel adds an advisory warning to its answer. Nothing is banned, counted or stored because of it.
+**Sentinel extension: successful-authentication alert following repeated failures for the same account and source address.** When a successful login follows repeated failed attempts for the same username from the same IP inside the window, Sentinel adds an advisory warning to its answer. Nothing is banned, counted or persisted because of it.
 
 How it relates to this file:
 
@@ -175,3 +175,5 @@ How it relates to this file:
 - **No claim is made about CrowdSec.** We did not examine whether the original, its hub content or its bouncers can detect a success that follows failures, and we do not say it is absent. No observation in [OBSERVATIONS.md](OBSERVATIONS.md) bears on it.
 
 Specified in [API.md](API.md) ("The Warning object"), decision D-17 in [ARCHITECTURE.md](ARCHITECTURE.md) and the Config table in [DATA_MODEL.md](DATA_MODEL.md). Recorded in [AGENT_LOG.md](AGENT_LOG.md), Session 5.
+
+An **optional AI incident brief** for administrators was added later still (endpoint 5 in [API.md](API.md), decision D-18, [AGENT_LOG.md](AGENT_LOG.md) Session 6). The same three statements apply to it: it is not derived from any gap, it is neither the fix nor the Differentiator, and no claim is made about CrowdSec.
