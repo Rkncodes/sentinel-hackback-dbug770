@@ -161,3 +161,17 @@ Specified as FR-14 in [PRD.md](PRD.md), D-16 in [ARCHITECTURE.md](ARCHITECTURE.m
 | Detect one account attacked from many IPs | `groupby` is an expression (O-7), so grouping by username may already be possible by configuration. Absence not shown. |
 | Ban duration that grows for repeat offenders | A commented example in the default profile file computes a duration from past decisions (`config/profiles.yaml:8`). Probably already exists. |
 | Generic risk scoring | No evidence either way. Absence not shown. |
+
+## 4. Post-specification extension
+
+Added after this file was finalized. It does not change anything above: the rebuild's two required improvements remain Improvement 1 (section 2) and Improvement 2 (section 3).
+
+**Sentinel extension: successful-authentication alert following repeated failures for the same account and source address.** When a successful login follows repeated failed attempts for the same username from the same IP inside the window, Sentinel adds an advisory warning to its answer. Nothing is banned, counted or stored because of it.
+
+How it relates to this file:
+
+- **It is not derived from any gap G-1 to G-8.** It addresses a limit of our own rule: a threshold only catches an attacker who keeps failing, so a correct guess before the threshold would pass as an ordinary login.
+- **It is not the fix and not the Differentiator.**
+- **No claim is made about CrowdSec.** We did not examine whether the original, its hub content or its bouncers can detect a success that follows failures, and we do not say it is absent. No observation in [OBSERVATIONS.md](OBSERVATIONS.md) bears on it.
+
+Specified in [API.md](API.md) ("The Warning object"), decision D-17 in [ARCHITECTURE.md](ARCHITECTURE.md) and the Config table in [DATA_MODEL.md](DATA_MODEL.md). Recorded in [AGENT_LOG.md](AGENT_LOG.md), Session 5.

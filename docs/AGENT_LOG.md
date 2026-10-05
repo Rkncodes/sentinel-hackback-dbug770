@@ -4,7 +4,7 @@
 
 A record of the work done so far with an AI coding agent (Claude Code), in order. Three sessions on 2026-10-05: reconnaissance, documentation, then a final audit and correction pass.
 
-**State at the end of this log: documentation only. No implementation code has been written.**
+**State at the end of Session 3: documentation only; no implementation code had been written.** The build is recorded in Sessions 4 and 5 at the end of this file. The sections "Unresolved" and "Not done" describe the state at the end of Session 3.
 
 ## Ground rules followed in every session
 
@@ -203,3 +203,87 @@ A narrow search was made for one purpose: to test whether the Differentiator's a
 - No execution of the original.
 - No verification of anything outside the one repository and commit.
 - Nothing committed or pushed.
+
+## Session 4 — Implementation (clean-room build)
+
+Added to this log after the fact, in Session 5, so that the build is on record. Sessions 1 to 3 were not altered apart from the state line at the top of this file.
+
+### Ground rules
+
+| Rule | How it was kept |
+|---|---|
+| Specification | The seven files in `docs/` were the only product specification used |
+| Original | The CrowdSec checkout was not opened, searched or referenced during the build |
+| Dependencies | Python standard library only. Nothing was installed. CrowdSec is not a dependency |
+| Docs | The seven files were not modified during this session |
+
+### Decisions taken before coding
+
+The plan was reviewed against the docs first. Six points the docs left open were raised and approved by the team before any code was written:
+
+| Point | Decision |
+|---|---|
+| When the clock is read | Inside the per-IP critical section, so timestamps for one IP are processed in order |
+| User interface | The service stays API-only. The demo is a separate mock portal under `demo/` |
+| Showing expiry in the demo | Real clock with a short configured ban duration. No clock endpoint |
+| Idle failure windows | A periodic in-memory sweep that cannot change any decision |
+| `limit` out of range on `GET /v1/bans` | `400 invalid_request` |
+| Location | The implementation lives in its own repository, separate from the CrowdSec checkout |
+
+Technology chosen: Python standard library (`http.server`, `sqlite3`, `threading`, `unittest`), one SQLite file for bans, per-IP atomicity through a fixed set of locks keyed by IP.
+
+### Order of work
+
+1. Core (FR-1 to FR-12): the four endpoints, detection, ban lifecycle, persistence, manual unban. 53 tests, including the three Killer Tests.
+2. Improvement 1 (FR-13): `context=session` on `GET /v1/check`. 8 tests.
+3. Improvement 2 (FR-14): the `explanation` object. 10 tests.
+4. Demo: mock portal and one page under `demo/`. 5 tests, using the real clock.
+5. Submission artifacts: `README.md`, `SUBMISSION.md`, `.env.example`, `deck.pdf`.
+
+State at the end of Session 4: 76 automated tests passing.
+
+### Known deviations from the docs
+
+- An unknown route is answered `404 not_found`, and an unexpected server fault `500` with code `internal_error`. Neither is in the error table of [API.md](API.md).
+- NFR-4 (check latency) was measured only informally on the development machine, not under load.
+- The demo page was verified through the portal endpoints its buttons call, not by an automated browser test.
+
+## Session 5 — Extension: success alert
+
+### What and why
+
+A competitive review of the finished build concluded that it read as a careful, narrow rebuild. One extension was added on top of it:
+
+> Sentinel extension: successful-authentication alert following repeated failures for the same account and source address.
+
+A threshold ban only catches an attacker who keeps failing. If the correct password is guessed before the tenth failure, no ban fires and the login looks ordinary. Sentinel now answers such a success with a `warning`.
+
+### What this is not
+
+- **It is not the Differentiator and not one of the two required improvements.** Those remain Improvement 1 and Improvement 2 as specified in Session 3.
+- **No claim is made about CrowdSec.** Whether the original, its hub content or its bouncers can detect a success after failures was not examined. We do not say it is absent.
+- It was not derived from the original. It comes from a blind spot in our own rule FR-4 (successes never count).
+
+### Behavior
+
+- On a `success` report with a `username`, from an IP that is not banned, Sentinel counts the failures in the window for the same IP and username. At `success_alert_threshold` (default 5, `SENTINEL_SUCCESS_ALERT_THRESHOLD`) or above, the answer carries `warning` with a code, a fixed message and the count.
+- The alert threshold must be lower than the ban threshold. A setting at or above it could never fire and is rejected at start-up; when unset, the default is 5 or one below the ban threshold, whichever is lower.
+- It is advisory. Nothing is banned, counted, stored or reset. A banned IP still gets the normal "banned" answer with no warning.
+- The warning contains no username, timestamps or evidence.
+
+### Changes
+
+| Area | Change |
+|---|---|
+| Code | `sentinel/config.py`, `sentinel/detector.py` (one read-only count), `sentinel/service.py`, `sentinel/api.py`, `sentinel/__main__.py` (start-up message) |
+| Tests | `tests/test_success_alert.py` (27 tests); one test added to `tests/test_demo.py`. No existing test was changed |
+| Demo | `demo/portal.py` passes the warning through; `demo/index.html` gains an account field, a "Send 5 failed logins" button and a "Guess the correct password" button with an amber alert |
+| Docs | `API.md` (Warning object, endpoint 1), `DATA_MODEL.md` (Config, Login Attempt), `ARCHITECTURE.md` (3.1 step 5, D-17), a "Post-specification extension" note in `PRD.md` (section 9) and `GAPS.md` (section 4), this log |
+| Artifacts | `README.md`, `SUBMISSION.md`, `.env.example` updated; `deck.pdf` re-created with the extension shown separately from the two improvements |
+
+State at the end of Session 5: 104 automated tests passing (the 76 from Session 4, unchanged, plus 28).
+
+### Left open for the team
+
+- [PRD.md](PRD.md) section 9 and [GAPS.md](GAPS.md) still say the rebuild carries "exactly two improvements". That wording was kept on purpose: it describes the two required improvements, and each file now carries a separate note for the extension.
+- When checking the demo, an older Sentinel process was found still listening on port 8080. On Windows a second instance can bind the same port without an error, so requests may reach the older process. Stop old instances before a demonstration.

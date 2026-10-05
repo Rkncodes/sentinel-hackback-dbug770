@@ -29,7 +29,8 @@ def main() -> int:
     print(
         f"sentinel: listening on http://{config.host}:{server.server_address[1]} "
         f"(threshold={config.threshold}, window={config.window_seconds}s, "
-        f"ban={config.ban_duration_seconds}s, db={config.db_path})",
+        f"ban={config.ban_duration_seconds}s, "
+        f"success_alert={config.success_alert_threshold or 'off'}, db={config.db_path})",
         flush=True,
     )
     try:

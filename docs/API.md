@@ -17,6 +17,8 @@ It is not CrowdSec's API. CrowdSec's bouncer-facing endpoints are `GET /v1/decis
 
 There are four endpoints because there are four things a caller needs to do. Endpoints 1 and 2 are enough for the three Killer Tests. Endpoints 3 and 4 serve the audit and manual-unban requirements (FR-9, FR-10). Neither improvement adds an endpoint: Improvement 1 is a parameter of endpoint 2, and Improvement 2 is a field in the answers of endpoints 1 and 2.
 
+One extension was added after this contract was finalized: the **success alert**, a `warning` field in the answer of endpoint 1 (see "The Warning object"). It adds no endpoint and changes no existing field.
+
 ## 2. Conventions
 
 - **Format.** Request and response bodies are JSON (`Content-Type: application/json`).
@@ -86,6 +88,23 @@ Improvement 2. Returned to the portal with every answer that says an IP is banne
 - It never contains evidence, usernames or rule values.
 - It is `null` whenever the IP is not banned.
 
+### The Warning object
+
+Extension. Returned to the portal in the answer to a `success` report when that success followed repeated failed attempts for the same account from the same address: the password may have been guessed.
+
+```json
+{
+  "code": "success_after_failed_attempts",
+  "message": "Successful login followed repeated failed attempts from this address.",
+  "failed_attempts": 5
+}
+```
+
+- `failed_attempts` is the number of failures inside the window for the reported `ip` and `username`.
+- It contains no username, no timestamps and no evidence.
+- It is advisory. Sentinel bans nothing because of it; what to do (for example ask for re-verification, or notify the account owner) is the portal's decision.
+- The `warning` field is present only when the alert fires. It is absent otherwise.
+
 ## 3. Endpoints
 
 ### 3.1 `POST /v1/login-attempts`
@@ -113,6 +132,7 @@ Report that a login attempt happened. The portal calls this after it has verifie
 | `ban_triggered` | boolean | `true` only if this report created the ban |
 | `ban` | Ban object or `null` | The active ban, without `evidence`; `null` when not banned |
 | `explanation` | Explanation object or `null` | Present when `banned` is `true` |
+| `warning` | Warning object | Extension. Present only when the success alert fires; absent otherwise |
 
 ```json
 {
@@ -144,6 +164,7 @@ Report that a login attempt happened. The portal calls this after it has verifie
 
 - A `failure` from an IP that is not banned is counted. A failure counts toward the threshold if it was received no more than 60 seconds before the current one. If this is the 10th such failure, the ban exists before this response is sent.
 - A `success` is never counted and never resets the count.
+- **Success alert (extension).** A `success` that carries a `username`, from an IP that is not banned, is answered with a `warning` if at least 5 failures (configurable) for the same `ip` and `username` were received no more than 60 seconds before it. Failures for other usernames or other IPs do not contribute, and a report without a `username` never produces the alert. The alert changes nothing: no ban is created or modified and the failure count is neither increased nor reset.
 - A report from an IP that is already banned is not counted, whatever its outcome. It does not extend the ban or create another. The response has `banned: true` and `ban_triggered: false`.
 - **If the response has `banned: true`, the portal must not create a session**, even when the reported outcome was `success`.
 - Reports for the same IP are processed atomically, one after another. Concurrent reports cannot create two bans or lose a failure.

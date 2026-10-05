@@ -105,7 +105,10 @@ class Portal:
             return {"outcome": "wrong_password", "sentinel": calls}
         token = secrets.token_urlsafe(16)
         self.sessions[token] = username
-        return {"outcome": "signed_in", "session": token, "username": username, "sentinel": calls}
+        # Sentinel's alert, if any: this success followed repeated failures on the
+        # same account from the same address. The portal decides what to do with it.
+        return {"outcome": "signed_in", "session": token, "username": username,
+                "warning": report["response"].get("warning"), "sentinel": calls}
 
     def session_request(self, ip: str, token: str) -> dict:
         username = self.sessions.get(token)

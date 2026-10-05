@@ -21,6 +21,12 @@ _MESSAGES = {
 }
 
 
+_SUCCESS_ALERT = {
+    "code": "success_after_failed_attempts",
+    "message": "Successful login followed repeated failed attempts from this address.",
+}
+
+
 class BanNotFound(Exception):
     pass
 
@@ -49,6 +55,7 @@ class Verdict:
     now_ms: int
     ban: Ban | None  # the active ban, if any
     ban_triggered: bool = False
+    warning: dict | None = None  # set only on a successful report; see Sentinel.report
 
     @property
     def banned(self) -> bool:
@@ -77,7 +84,7 @@ class Sentinel:
                 # Already banned: nothing is counted, whatever the outcome.
                 return Verdict(ip, now, ban)
             if outcome != "failure":
-                return Verdict(ip, now, None)
+                return Verdict(ip, now, None, warning=self._success_alert(ip, now, username))
             failures = self._detector.record_failure(ip, now, username)
             if len(failures) < self.config.threshold:
                 return Verdict(ip, now, None)
@@ -94,6 +101,18 @@ class Sentinel:
             )
             self._detector.clear(ip)
             return Verdict(ip, now, ban, ban_triggered=True)
+
+    def _success_alert(self, ip: str, now: int, username: str | None) -> dict | None:
+        """A correct password right after repeated failures on the same account from
+        the same address may be a guess that worked. This only tells the portal:
+        nothing is counted, stored or banned, and the failure window is untouched."""
+        threshold = self.config.success_alert_threshold
+        if not username or threshold is None:
+            return None
+        failures = self._detector.count_failures(ip, now, username)
+        if failures < threshold:
+            return None
+        return {**_SUCCESS_ALERT, "failed_attempts": failures}
 
     def check(self, ip: str) -> Verdict:
         now = self.clock.now_ms()

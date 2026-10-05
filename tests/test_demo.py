@@ -113,6 +113,24 @@ class DemoFlowTests(DemoPortalCase):
         self.assertEqual(self.active_bans(), [])
         self.assertEqual(self.login(IP_A)["outcome"], "signed_in")
 
+    def test_lucky_guess_is_flagged_and_the_ban_flow_still_works(self):
+        for _ in range(5):
+            self.assertEqual(self.login(IP_A, "wrong")["outcome"], "wrong_password")
+        guess = self.login(IP_A)  # correct password, before the ban threshold
+        self.assertEqual(guess["outcome"], "signed_in")
+        self.assertEqual(guess["warning"]["code"], "success_after_failed_attempts")
+        self.assertEqual(guess["warning"]["failed_attempts"], 5)
+        self.assertFalse(self.check(IP_A)["banned"])
+        self.assertIsNone(self.login(IP_B)["warning"])  # another address: no alert
+
+        # The success reset nothing: five more failures reach the threshold of ten.
+        for _ in range(4):
+            self.assertEqual(self.login(IP_A, "wrong")["outcome"], "wrong_password")
+        tenth = self.login(IP_A, "wrong")
+        self.assertEqual(tenth["outcome"], "blocked")
+        self.assertTrue(tenth["ban_triggered"])
+        self.assertEqual(self.login(IP_A)["outcome"], "blocked")
+
     def test_admin_unban(self):
         for _ in range(10):
             last = self.login(IP_A, "wrong")

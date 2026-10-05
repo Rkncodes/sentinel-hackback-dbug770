@@ -158,6 +158,17 @@ Both improvements are additions. Neither changes the result of any Killer Test.
 | A-4 | Every answer that says *A* is banned carries an explanation with the reason, start time and expiry time, and no evidence. |
 | A-5 | An answer for an IP that is not banned carries no explanation. |
 
+### Post-specification extension
+
+Added after this specification was finalized and after the core and both improvements were built and tested. It is recorded here for transparency; see [AGENT_LOG.md](AGENT_LOG.md), Session 5.
+
+**Sentinel extension: successful-authentication alert following repeated failures for the same account and source address.** When a successful login report follows at least 5 failed attempts (configurable, and always lower than the ban threshold) for the same username from the same IP inside the window, Sentinel's answer carries a warning for the portal. The alert is advisory: it bans nothing, counts nothing, stores nothing and resets nothing, and a banned IP is still answered "banned".
+
+- It is **not** a third required improvement. The required improvements remain exactly the two in the table above, unchanged.
+- It is **not** the Differentiator, and it is not derived from a gap in [GAPS.md](GAPS.md).
+- We make **no claim** about whether CrowdSec has an equivalent. That was not examined.
+- It leaves FR-4 intact: a success still never counts toward a ban and never resets the count. The contract is in [API.md](API.md), "The Warning object".
+
 ### Not planned
 
 Recorded so they are not mistaken for scope: IP range bans, escalating ban durations, detection keyed on username, risk scoring, multi-instance deployment, a dashboard.

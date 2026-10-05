@@ -59,6 +59,16 @@ A session check writes nothing and never changes the ban. There is no bypass: a 
 
 **Verified by:** [tests/test_improvement2.py](tests/test_improvement2.py), 10 tests.
 
+## Extension — the success alert
+
+Added on top of the two improvements; it is neither the fix nor the Differentiator.
+
+**Sentinel extension: successful-authentication alert following repeated failures for the same account and source address.** A threshold ban only catches an attacker who keeps failing. When a `success` report follows at least 5 failures (configurable) for the same username from the same IP inside the 60-second window, Sentinel's answer carries a `warning` with a code, a fixed message and the number of failures. It is advisory: nothing is banned, counted, stored or reset, and a banned IP still gets the normal "banned" answer. The warning contains no username and no failure history.
+
+**No claim about the original.** We did not examine whether CrowdSec, its hub content or its bouncers can do this, and we do not say it is absent. It was added after the specification was finalized and is recorded as such in [docs/AGENT_LOG.md](docs/AGENT_LOG.md), Session 5.
+
+**Verified by:** [tests/test_success_alert.py](tests/test_success_alert.py), 27 tests, plus one demo test.
+
 ## Technologies and libraries
 
 | | |
@@ -81,7 +91,7 @@ Command:
 python -m unittest discover -s tests -t . -v
 ```
 
-Result: **76 tests, all passing** (Python 3.12 on Windows 11).
+Result: **104 tests, all passing** (Python 3.12 on Windows 11).
 
 | File | Tests |
 |---|---|
@@ -90,17 +100,18 @@ Result: **76 tests, all passing** (Python 3.12 on Windows 11).
 | tests/test_api.py | 21 |
 | tests/test_improvement1.py | 8 |
 | tests/test_improvement2.py | 10 |
-| tests/test_demo.py | 5 |
+| tests/test_success_alert.py | 27 |
+| tests/test_demo.py | 6 |
 
 Time-dependent tests use a fake clock injected by the test harness; Sentinel has no public endpoint for controlling time. The demo tests use the real clock with a 3-second ban. The demo page itself was verified by driving the portal endpoints its buttons call; there is no automated browser test.
 
 ## Demo
 
-A mock portal under [demo/](demo/), separate from the service, shows the attack, the automatic ban, the unaffected user on another IP, the existing session that keeps working, the blocked new login with its explanation, the countdown to exact expiry, and an admin unban. Start-up commands are in [README.md](README.md).
+A mock portal under [demo/](demo/), separate from the service, shows the attack, the automatic ban, the unaffected user on another IP, the existing session that keeps working, the blocked new login with its explanation, the countdown to exact expiry, an admin unban, and the success alert when the attacker guesses correctly before the threshold. Start-up commands are in [README.md](README.md).
 
 ## Clean-room constraint
 
-The original was studied first and only its behavior was recorded, in [docs/OBSERVATIONS.md](docs/OBSERVATIONS.md) and [docs/GAPS.md](docs/GAPS.md). The specification of the rebuild was then written in [docs/PRD.md](docs/PRD.md), [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/DATA_MODEL.md](docs/DATA_MODEL.md) and [docs/API.md](docs/API.md). The implementation was written from those seven documents alone, without opening the CrowdSec checkout. [docs/AGENT_LOG.md](docs/AGENT_LOG.md) records the study and specification sessions; it was frozen before implementation began and so does not describe the build.
+The original was studied first and only its behavior was recorded, in [docs/OBSERVATIONS.md](docs/OBSERVATIONS.md) and [docs/GAPS.md](docs/GAPS.md). The specification of the rebuild was then written in [docs/PRD.md](docs/PRD.md), [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/DATA_MODEL.md](docs/DATA_MODEL.md) and [docs/API.md](docs/API.md). The implementation was written from those seven documents alone, without opening the CrowdSec checkout. [docs/AGENT_LOG.md](docs/AGENT_LOG.md) records the study and specification sessions (1 to 3), the build (4) and the extension (5).
 
 ## Deliverables in this repository
 

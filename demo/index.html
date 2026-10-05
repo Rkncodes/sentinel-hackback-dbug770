@@ -5,161 +5,322 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Sentinel demo portal</title>
 <style>
-  :root { --ok: #17663a; --ok-bg: #e2f4e8; --bad: #a11a1a; --bad-bg: #fbe3e3; --line: #c9ced6; --muted: #5a6370; }
+  :root {
+    --bg: #090d13; --panel: #101722; --panel-2: #0c121b; --line: #1f2a3a; --line-2: #2a3850;
+    --text: #e7ecf3; --muted: #8a97ab; --dim: #5d6a7e;
+    --ok: #3ddc97; --ok-bg: rgba(61, 220, 151, .08); --ok-line: rgba(61, 220, 151, .35);
+    --warn: #ffb020; --warn-bg: rgba(255, 176, 32, .09); --warn-line: rgba(255, 176, 32, .55);
+    --bad: #ff5d5d; --bad-bg: rgba(255, 93, 93, .09); --bad-line: rgba(255, 93, 93, .55);
+    --accent: #6aa9ff;
+    --sans: "Segoe UI Variable Display", "Segoe UI", system-ui, -apple-system, sans-serif;
+    --mono: "Cascadia Code", "Cascadia Mono", Consolas, ui-monospace, monospace;
+  }
   * { box-sizing: border-box; }
-  body { margin: 0; padding: 16px; font: 15px/1.45 system-ui, sans-serif; color: #1b1f24; background: #f3f4f6; }
-  h1 { font-size: 20px; margin: 0 0 4px; }
-  h2 { font-size: 13px; letter-spacing: .08em; margin: 0 0 2px; }
-  p { margin: 4px 0 8px; }
-  .muted { color: var(--muted); font-size: 13px; }
-  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; margin-top: 12px; }
-  .panel { background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 12px; }
-  .panel.wide { grid-column: 1 / -1; }
-  .ips label { margin-right: 20px; white-space: nowrap; }
-  input { font: inherit; padding: 4px 6px; width: 150px; border: 1px solid var(--line); border-radius: 4px; }
-  button { font: inherit; padding: 6px 10px; margin: 2px 4px 2px 0; border: 1px solid #8a93a0; border-radius: 4px; background: #fff; cursor: pointer; }
-  button:hover { background: #eef0f3; }
-  .result { margin-top: 8px; padding: 8px 10px; border-radius: 6px; border: 1px solid var(--line); background: #f7f8fa; min-height: 38px; }
-  .result.ok { background: var(--ok-bg); border-color: var(--ok); color: var(--ok); font-weight: 600; }
-  .result.bad { background: var(--bad-bg); border-color: var(--bad); color: var(--bad); font-weight: 600; }
-  .count { font-size: 28px; font-weight: 700; font-variant-numeric: tabular-nums; }
-  #banCard.banned { border: 2px solid var(--bad); background: var(--bad-bg); }
-  #banCard.clear { border: 2px solid var(--ok); background: var(--ok-bg); }
-  #banTitle { font-size: 18px; font-weight: 700; }
-  dl { display: grid; grid-template-columns: max-content 1fr; gap: 2px 12px; margin: 6px 0 0; }
-  dt { color: var(--muted); } dd { margin: 0; overflow-wrap: anywhere; }
-  .explain { margin-top: 8px; padding: 8px 10px; background: #fff; border: 1px dashed var(--bad); border-radius: 6px; color: #1b1f24; font-weight: 400; }
-  .countdown { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
-  table { border-collapse: collapse; width: 100%; } th, td { text-align: left; padding: 4px 8px; border-bottom: 1px solid var(--line); }
+  html { color-scheme: dark; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.5 var(--sans); }
+  .wrap { max-width: 1240px; margin: 0 auto; padding: 20px 20px 40px; }
+  .mono { font-family: var(--mono); }
+  .muted { color: var(--muted); }
+
+  /* header */
+  .top { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 18px; }
+  .brand { display: flex; align-items: center; gap: 14px; }
+  .mark { width: 38px; height: 38px; border-radius: 10px; border: 2px solid var(--accent); position: relative;
+          box-shadow: 0 0 18px rgba(106, 169, 255, .25); }
+  .mark::after { content: ""; position: absolute; inset: 9px; border-radius: 3px; background: var(--accent); }
+  .word { font-size: 24px; font-weight: 700; letter-spacing: .22em; line-height: 1.1; }
+  .tagline { font-size: 13px; color: var(--muted); letter-spacing: .04em; }
+  .status { display: flex; align-items: center; gap: 12px; padding: 9px 16px 9px 14px; border-radius: 999px;
+            border: 1px solid var(--ok-line); background: var(--ok-bg); transition: background .25s, border-color .25s; }
+  .status .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 10px var(--ok); }
+  .status .k { font-size: 10px; letter-spacing: .16em; color: var(--muted); font-weight: 600; line-height: 1.2; }
+  .status .v { font-size: 15px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--ok); line-height: 1.2; }
+  .status.warn { border-color: var(--warn-line); background: var(--warn-bg); }
+  .status.warn .dot { background: var(--warn); box-shadow: 0 0 10px var(--warn); } .status.warn .v { color: var(--warn); }
+  .status.bad { border-color: var(--bad-line); background: var(--bad-bg); }
+  .status.bad .dot { background: var(--bad); box-shadow: 0 0 10px var(--bad); } .status.bad .v { color: var(--bad); }
+
+  /* hero: the current incident state */
+  .hero { border-radius: 14px; border: 1px solid var(--ok-line); background: linear-gradient(180deg, var(--ok-bg), transparent 140%), var(--panel);
+          padding: 22px 26px; margin-bottom: 16px; transition: border-color .25s, box-shadow .25s; }
+  .hero.warn { border: 2px solid var(--warn-line); background: linear-gradient(180deg, var(--warn-bg), transparent 160%), var(--panel);
+               box-shadow: 0 0 40px rgba(255, 176, 32, .12); }
+  .hero.bad { border: 2px solid var(--bad-line); background: linear-gradient(180deg, var(--bad-bg), transparent 160%), var(--panel);
+              box-shadow: 0 0 40px rgba(255, 93, 93, .12); }
+  .kicker { font-size: 12px; font-weight: 700; letter-spacing: .2em; color: var(--ok); }
+  .hero.warn .kicker { color: var(--warn); } .hero.bad .kicker { color: var(--bad); }
+  .hero h1 { margin: 4px 0 6px; font-size: 34px; line-height: 1.12; font-weight: 700; letter-spacing: -.01em; }
+  .hero.warn h1 { color: var(--warn); } .hero.bad h1 { color: var(--bad); }
+  .hero .lead { font-size: 17px; max-width: 760px; margin: 0; }
+  .hero .note { font-size: 13px; color: var(--muted); margin: 12px 0 0; max-width: 860px; }
+  .hero .recovered { color: var(--ok); font-size: 14px; margin: 10px 0 0; }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; margin-top: 16px; }
+  .tile { background: rgba(0, 0, 0, .28); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; min-width: 0; }
+  .tile .k { font-size: 11px; font-weight: 600; letter-spacing: .16em; color: var(--muted); }
+  .tile .v { font-size: 20px; font-weight: 700; line-height: 1.25; margin-top: 2px; overflow-wrap: anywhere; }
+  .tile .s { font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
+  .tile.big .v { font-size: 30px; font-variant-numeric: tabular-nums; }
+  .v.ok { color: var(--ok); } .v.warn { color: var(--warn); } .v.bad { color: var(--bad); }
+  .badge { display: inline-block; padding: 3px 12px; border-radius: 999px; font-size: 14px; font-weight: 700; letter-spacing: .1em; }
+  .badge.ok { color: var(--ok); border: 1px solid var(--ok-line); background: var(--ok-bg); }
+  .badge.bad { color: var(--bad); border: 1px solid var(--bad-line); background: var(--bad-bg); }
+
+  /* panels */
+  .grid { display: grid; grid-template-columns: minmax(300px, 380px) 1fr; gap: 16px; align-items: start; }
+  .side { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; }
+  .two { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; margin-top: 16px; }
+  @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } .hero h1 { font-size: 27px; } }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; min-width: 0; }
+  .panel h2 { margin: 0; font-size: 12px; font-weight: 700; letter-spacing: .18em; color: var(--text); }
+  .panel .sub { font-size: 12px; color: var(--dim); letter-spacing: .08em; margin: 2px 0 10px; text-transform: uppercase; }
+  .panel p { margin: 0 0 10px; font-size: 13px; color: var(--muted); }
+  label.field { display: block; font-size: 11px; font-weight: 600; letter-spacing: .14em; color: var(--muted); margin-bottom: 10px; }
+  input { display: block; width: 100%; margin-top: 4px; padding: 8px 10px; font: 14px var(--mono); color: var(--text);
+          background: var(--panel-2); border: 1px solid var(--line-2); border-radius: 8px; outline: none; }
+  input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(106, 169, 255, .15); }
+  .fields { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .counter { display: flex; align-items: baseline; gap: 10px; margin: 4px 0 12px; }
+  .counter .n { font-size: 44px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+  .counter .l { font-size: 12px; color: var(--muted); letter-spacing: .08em; text-transform: uppercase; }
+  .btns { display: flex; flex-wrap: wrap; gap: 8px; }
+  button { font: 600 13px var(--sans); color: var(--text); background: #18212f; border: 1px solid var(--line-2); border-radius: 8px;
+           padding: 8px 12px; cursor: pointer; transition: background .15s, border-color .15s; }
+  button:hover { background: #1f2b3d; border-color: #3a4c69; }
+  button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  button.primary { width: 100%; margin-top: 10px; padding: 11px 12px; font-size: 14px; color: #1a1200; background: var(--warn); border-color: var(--warn); }
+  button.primary:hover { background: #ffc04d; border-color: #ffc04d; }
+  button.small { padding: 4px 10px; font-size: 12px; }
+  .result { margin-top: 12px; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel-2);
+            font-size: 13px; color: var(--muted); min-height: 42px; overflow-wrap: anywhere; }
+  .result b { display: block; font-size: 13px; letter-spacing: .1em; margin-bottom: 2px; }
+  .result.ok { border-color: var(--ok-line); background: var(--ok-bg); color: var(--text); } .result.ok b { color: var(--ok); }
+  .result.bad { border-color: var(--bad-line); background: var(--bad-bg); color: var(--text); } .result.bad b { color: var(--bad); }
+  .result.warn { border-color: var(--warn-line); background: var(--warn-bg); color: var(--text); } .result.warn b { color: var(--warn); }
+  .explain { margin-top: 10px; padding: 10px 12px; border: 1px dashed var(--bad-line); border-radius: 8px; background: rgba(0, 0, 0, .25); }
+  .explain .cap { font-size: 10px; font-weight: 700; letter-spacing: .16em; color: var(--muted); margin-bottom: 4px; }
+  dl { display: grid; grid-template-columns: max-content 1fr; gap: 2px 12px; margin: 6px 0 0; font-size: 12px; }
+  dt { color: var(--muted); } dd { margin: 0; overflow-wrap: anywhere; font-family: var(--mono); }
+  .explain dl { grid-template-columns: 1fr; gap: 0; } .explain dt { margin-top: 6px; font-size: 11px; } .explain dd { font-size: 11.5px; }
   .scroll { overflow-x: auto; }
-  pre, #log { font: 12px/1.4 ui-monospace, Consolas, monospace; background: #14181d; color: #dfe5ec; padding: 8px; border-radius: 6px; margin: 6px 0 0; height: 260px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
-  #log .bad { color: #ff9b9b; } #log .ok { color: #8fe0a8; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  th { text-align: left; padding: 6px 10px; font-size: 10px; letter-spacing: .14em; color: var(--muted); font-weight: 600; border-bottom: 1px solid var(--line-2); }
+  td { padding: 8px 10px; border-bottom: 1px solid var(--line); font-family: var(--mono); font-size: 12px; }
+  .head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+  pre, #log { font: 12px/1.5 var(--mono); background: #070a0f; color: #c9d3e0; border: 1px solid var(--line); border-radius: 8px;
+              padding: 10px 12px; margin: 8px 0 0; height: 250px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
+  #log .bad { color: #ff9a9a; } #log .ok { color: #7fe6b6; } #log .warn { color: #ffcb6b; }
+  footer { margin-top: 18px; font-size: 12px; color: var(--dim); }
 </style>
 </head>
 <body>
+<div class="wrap">
 
-<h1>Sentinel demo portal</h1>
-<p class="muted">A mock university portal. It is a separate client of the Sentinel API: it owns the sessions and the password check,
-and asks Sentinel before and after every login. The "client IP" below is simulated and is simply sent to Sentinel.</p>
+<header class="top">
+  <div class="brand">
+    <div class="mark" aria-hidden="true"></div>
+    <div>
+      <div class="word">SENTINEL</div>
+      <div class="tagline">Intrusion Detection &amp; Response</div>
+    </div>
+  </div>
+  <div class="status" id="sysStatus" role="status">
+    <span class="dot"></span>
+    <div><div class="k">SYSTEM STATUS</div><div class="v" id="sysStatusText">Protected</div></div>
+  </div>
+</header>
 
-<div class="panel ips">
-  <label>Simulated IP A (attacker's network) <input id="ipA" value="203.0.113.7"></label>
-  <label>Simulated IP B (another network) <input id="ipB" value="198.51.100.20"></label>
-</div>
+<section class="hero" id="hero" aria-live="polite"></section>
 
 <div class="grid">
 
-  <div class="panel wide" id="banCard">
-    <h2>BAN STATUS OF IP A <span class="muted">(what a blocked person is shown)</span></h2>
-    <div id="banTitle">…</div>
-    <dl id="banDetails"></dl>
-  </div>
-
   <div class="panel">
-    <h2>ATTACKER <span class="muted">on IP A</span></h2>
-    <p class="muted">Sends failed logins (wrong password). The 10th failure inside the window triggers the ban.</p>
-    <div>Failed logins sent: <span class="count" id="count">0</span></div>
-    <button onclick="attack(1)">Send 1 failed login</button>
-    <button onclick="attack(10)">Send 10 failed logins</button>
-    <div class="result" id="attackResult">No attempts yet.</div>
+    <h2>ATTACK SIMULATOR</h2>
+    <div class="sub">ATTACKER · failed and guessed logins</div>
+    <div class="fields">
+      <label class="field">ACCOUNT <input id="attackUser" value="student" spellcheck="false"></label>
+      <label class="field">SOURCE IP <input id="ipA" value="203.0.113.7" spellcheck="false"></label>
+    </div>
+    <div class="counter"><span class="n" id="count">0</span><span class="l">failed logins sent<br>from this address</span></div>
+    <div class="btns">
+      <button id="btnFail1" onclick="attack(1)">+1 failed login</button>
+      <button id="btnFail5" onclick="attack(5)">+5 failed logins</button>
+      <button id="btnFail10" onclick="attack(10)">+10 failed logins</button>
+    </div>
+    <button class="primary" id="btnGuess" onclick="luckyGuess()">Sign in with the correct password</button>
+    <div class="result" id="attackResult">No attempts yet. The 10th failure inside the window bans the address. A correct guess before that is allowed, but flagged.</div>
   </div>
 
-  <div class="panel">
-    <h2>LEGITIMATE USER <span class="muted">on IP B</span></h2>
-    <p class="muted">A normal user on a different address, at the same time.</p>
-    <button onclick="signInB()">Sign in on IP B</button>
-    <button onclick="checkB()">Check IP B</button>
-    <div class="result" id="legitResult">Not tried yet.</div>
-  </div>
+  <div class="side">
+    <div class="panel">
+      <h2>EXISTING SESSION</h2>
+      <div class="sub">Source IP · context=session</div>
+      <p>A student who signed in from the same address <b>before</b> the attack.</p>
+      <div class="btns">
+        <button id="btnSignInA" onclick="signInA()">1 · Sign in (before the attack)</button>
+        <button id="btnUseSession" onclick="useSession()">2 · Use the session</button>
+      </div>
+      <div class="result" id="sessionResult">No session yet.</div>
+    </div>
 
-  <div class="panel">
-    <h2>EXISTING SESSION <span class="muted">on IP A · context=session</span></h2>
-    <p class="muted">A student who signed in on IP A <b>before</b> the attack. Do step 1 first.</p>
-    <button onclick="signInA()">1. Sign in on IP A (before the attack)</button>
-    <button onclick="useSession()">2. Use the existing session</button>
-    <div class="result" id="sessionResult">No session yet.</div>
-  </div>
+    <div class="panel">
+      <h2>NEW LOGIN</h2>
+      <div class="sub">Source IP · context=login</div>
+      <p>Someone on the same address who is not signed in, with the <b>correct</b> password.</p>
+      <div class="btns"><button id="btnNewLogin" onclick="newLogin()">Try a new sign-in</button></div>
+      <div class="result" id="loginResult">Not tried yet.</div>
+    </div>
 
-  <div class="panel">
-    <h2>NEW LOGIN <span class="muted">on IP A · context=login</span></h2>
-    <p class="muted">Someone on IP A who is not signed in, using the <b>correct</b> password.</p>
-    <button onclick="newLogin()">Try a new sign-in on IP A</button>
-    <div class="result" id="loginResult">Not tried yet.</div>
-  </div>
-
-  <div class="panel wide">
-    <h2>ADMIN <span class="muted">active bans · admin key</span></h2>
-    <button onclick="refreshAdmin()">Refresh</button>
-    <div class="scroll"><table>
-      <thead><tr><th>IP</th><th>Triggered</th><th>Expires</th><th>Evidence</th><th></th></tr></thead>
-      <tbody id="bans"><tr><td colspan="5" class="muted">No active bans.</td></tr></tbody>
-    </table></div>
-  </div>
-
-  <div class="panel">
-    <h2>LAST SENTINEL RESPONSE <span class="muted">(what the portal received)</span></h2>
-    <pre id="raw">—</pre>
-  </div>
-
-  <div class="panel">
-    <h2>ACTIVITY LOG <span class="muted">newest first</span></h2>
-    <div id="log"></div>
+    <div class="panel">
+      <h2>LEGITIMATE USER</h2>
+      <div class="sub">A different address</div>
+      <label class="field">OTHER IP <input id="ipB" value="198.51.100.20" spellcheck="false"></label>
+      <div class="btns">
+        <button id="btnSignInB" onclick="signInB()">Sign in</button>
+        <button id="btnCheckB" onclick="checkB()">Check address</button>
+      </div>
+      <div class="result" id="legitResult">Not tried yet.</div>
+    </div>
   </div>
 
 </div>
 
+<div class="panel" style="margin-top:16px">
+  <div class="head">
+    <div><h2>ADMIN</h2><div class="sub" style="margin-bottom:0">Active bans · admin key</div></div>
+    <button class="small" id="btnRefreshAdmin" onclick="refreshAdmin()">Refresh</button>
+  </div>
+  <div class="scroll"><table>
+    <thead><tr><th>IP</th><th>TRIGGERED</th><th>EXPIRES</th><th>EVIDENCE</th><th></th></tr></thead>
+    <tbody id="bans"><tr><td colspan="5" class="muted">No active bans.</td></tr></tbody>
+  </table></div>
+</div>
+
+<div class="two">
+  <div class="panel">
+    <h2>LAST SENTINEL RESPONSE</h2>
+    <div class="sub" style="margin-bottom:0">What the portal received</div>
+    <pre id="raw">—</pre>
+  </div>
+  <div class="panel">
+    <h2>ACTIVITY LOG</h2>
+    <div class="sub" style="margin-bottom:0">Newest first</div>
+    <div id="log"></div>
+  </div>
+</div>
+
+<footer>Mock university portal, a separate client of the Sentinel API. It owns the sessions and the password check; the addresses above are simulated and simply sent to Sentinel.</footer>
+
+</div>
 <script>
 const $ = id => document.getElementById(id);
 const ipA = () => $('ipA').value.trim();
 const ipB = () => $('ipB').value.trim();
+const attackUser = () => $('attackUser').value.trim();
 
-let sessionToken = null;   // the portal session held by the student on IP A
-let sent = 0;              // failed logins sent from IP A since its count last started
-let ban = null;            // explanation of A's active ban, plus expiresMs
+let sessionToken = null;   // the portal session held by the student on the source IP
+let sent = 0;              // failed logins sent from the source IP since its count last started
+let ban = null;            // explanation of the source IP's active ban, plus expiresMs and ip
+let flag = null;           // the last success alert: { count, account, ip }
+let recovered = null;      // how the last ban ended, shown once the address is clear again
+let unbanning = false;
 let timers = [], scheduledFor = null;
 
+function el(tag, cls, text) {
+  const node = document.createElement(tag);
+  if (cls) node.className = cls;
+  if (text !== undefined && text !== null) node.textContent = text;
+  return node;
+}
+
 function log(text, cls) {
-  const line = document.createElement('div');
+  const line = el('div', cls);
   const t = new Date();
   line.textContent = t.toLocaleTimeString('en-GB') + '.' + String(t.getMilliseconds()).padStart(3, '0') + '  ' + text;
-  if (cls) line.className = cls;
   $('log').prepend(line);
 }
 
-function result(id, cls, text, explanation) {
+function result(id, cls, title, text, explanation) {
   const box = $(id);
   box.className = 'result ' + cls;
-  box.textContent = text;
+  box.replaceChildren();
+  if (title) box.append(el('b', '', title));
+  box.append(text || '');
   if (explanation) box.append(explanationBox(explanation));
 }
 
 // The user-facing explanation: only the fields Sentinel provides for display.
-function explanationRows(e) {
-  return [
-    ['Status', e.blocked ? 'Blocked' : 'Not blocked'],
-    ['Reason', e.message + ' (' + e.reason_code + ')'],
-    ['Blocked since', e.started_at],
-    ['Blocked until', e.expires_at],
-    ['Try again in', e.retry_after_seconds + ' seconds'],
-  ];
-}
-
-function fillRows(dl, rows) {
-  dl.replaceChildren();
-  for (const [name, value] of rows) {
-    const dt = document.createElement('dt'), dd = document.createElement('dd');
-    dt.textContent = name;
-    if (value instanceof Node) dd.append(value); else dd.textContent = value;
-    dl.append(dt, dd);
-  }
-}
-
 function explanationBox(e) {
-  const box = document.createElement('div'), dl = document.createElement('dl');
-  box.className = 'explain';
-  fillRows(dl, explanationRows(e));
-  box.append('Shown to the user:', dl);
+  const box = el('div', 'explain'), dl = el('dl');
+  box.append(el('div', 'cap', 'SHOWN TO THE BLOCKED USER'), e.message);
+  for (const [name, value] of [['Reason', e.reason_code], ['Blocked since', e.started_at],
+                               ['Blocked until', e.expires_at], ['Try again in', e.retry_after_seconds + ' seconds']]) {
+    dl.append(el('dt', '', name), el('dd', '', value));
+  }
+  box.append(dl);
   return box;
+}
+
+/* ---------- hero: one card that always shows the current state ---------- */
+
+function tile(key, value, valueCls, small, big) {
+  const t = el('div', 'tile' + (big ? ' big' : ''));
+  t.append(el('div', 'k', key));
+  const v = el('div', 'v ' + (valueCls || ''));
+  if (value instanceof Node) v.append(value); else v.textContent = value;
+  t.append(v);
+  if (small) t.append(el('div', 's', small));
+  return t;
+}
+
+function setStatus(cls, text) {
+  $('sysStatus').className = 'status ' + cls;
+  $('sysStatusText').textContent = text;
+}
+
+function renderHero() {
+  const hero = $('hero'), tiles = el('div', 'tiles');
+  hero.replaceChildren();
+  if (ban) {
+    hero.className = 'hero bad';
+    setStatus('bad', 'IP banned');
+    const countdown = el('span');
+    countdown.id = 'countdown';
+    tiles.append(
+      tile('IP ADDRESS', ban.ip, '', 'new sign-ins refused'),
+      tile('REASON', 'Brute-force threshold exceeded', '', ban.reason_code),
+      tile('STATUS', el('span', 'badge bad', 'BANNED'), '', 'since ' + ban.started_at),
+      tile('EXPIRES IN', countdown, 'bad', 'at ' + ban.expires_at, true));
+    hero.append(el('div', 'kicker', 'INTRUSION RESPONSE'), el('h1', '', 'THREAT BLOCKED'),
+      el('p', 'lead', 'Too many failed sign-ins from this address. New logins are refused until the ban expires; existing sessions keep working.'),
+      tiles,
+      el('p', 'note', 'Shown to the blocked user: "' + ban.message + '"'));
+    tick();
+  } else if (flag) {
+    hero.className = 'hero warn';
+    setStatus('warn', 'Threat detected');
+    tiles.append(
+      tile('FAILED ATTEMPTS DETECTED', String(flag.count), 'warn', 'before the successful login', true),
+      tile('LOGIN', el('span', 'badge ok', 'LOGIN ALLOWED'), '', 'not blocked, not banned'),
+      tile('ACCOUNT', flag.account, '', 'same account'),
+      tile('SOURCE IP', flag.ip, '', 'same address'));
+    hero.append(el('div', 'kicker', 'SECURITY ALERT'), el('h1', '', 'SIGNED IN — BUT FLAGGED'),
+      el('p', 'lead', 'Successful login followed repeated failed attempts on this account from this address.'),
+      tiles,
+      el('p', 'note', 'No ban fired: the ban threshold was not reached, so a threshold alone would have missed this. ' +
+        "Sentinel's warning lets the portal ask for re-verification and alert the account owner."));
+  } else {
+    hero.className = 'hero';
+    setStatus('', 'Protected');
+    tiles.append(
+      tile('SOURCE IP', ipA() || '—', '', 'watched address'),
+      tile('STATUS', el('span', 'badge ok', 'NOT BANNED'), '', 'sign-in allowed'),
+      tile('FAILED LOGINS SENT', String(sent), '', 'from this address', true));
+    hero.append(el('div', 'kicker', 'SYSTEM STATUS'), el('h1', '', 'PROTECTED'),
+      el('p', 'lead', 'No active threat. Sentinel counts failed sign-ins per address and answers every login check.'));
+    if (recovered) hero.append(el('p', 'recovered', recovered));
+    hero.append(tiles);
+  }
+  $('count').textContent = sent;
 }
 
 async function call(method, path, body, quiet) {
@@ -183,9 +344,10 @@ async function call(method, path, body, quiet) {
   return data;
 }
 
-const login = (ip, password) => call('POST', '/api/login', { ip, username: 'student', password });
+const login = (ip, password, username) =>
+  call('POST', '/api/login', { ip, username: username || 'student', password });
 
-/* ---------- ban status of IP A, countdown and exact expiry ---------- */
+/* ---------- ban status of the source IP, countdown and exact expiry ---------- */
 
 async function refreshBan(quiet) {
   const r = await call('GET', '/api/check?ip=' + encodeURIComponent(ipA()) + '&context=login', null, quiet);
@@ -196,35 +358,32 @@ async function refreshBan(quiet) {
 }
 
 function renderBan(c) {
-  const card = $('banCard');
   if (c.banned) {
-    ban = Object.assign({ expiresMs: Date.parse(c.explanation.expires_at) }, c.explanation);
-    card.className = 'panel wide banned';
-    $('banTitle').textContent = 'BLOCKED — new sign-ins from ' + c.ip + ' are refused';
-    const countdown = document.createElement('span');
-    countdown.className = 'countdown';
-    countdown.id = 'countdown';
-    const rows = explanationRows(ban);
-    rows[4] = ['Try again in', countdown];
-    fillRows($('banDetails'), rows);
-    tick();
+    ban = Object.assign({ expiresMs: Date.parse(c.explanation.expires_at), ip: c.ip }, c.explanation);
+    recovered = null;
     schedule(ban.expiresMs);
   } else {
-    if (ban) sent = 0;   // a ban ended: the IP starts from zero
+    if (ban) {   // a ban ended: the address starts from zero
+      recovered = unbanning
+        ? 'Recovered: the ban on ' + ban.ip + ' was lifted by an administrator.'
+        : 'Recovered: the ban on ' + ban.ip + ' expired at ' + ban.expires_at + ' and lifted itself exactly on time.';
+      sent = 0;
+      flag = null;
+      // Results from the banned period no longer describe the current state.
+      result('attackResult', '', '', 'The ban has ended. The count for this address starts again from zero.');
+      result('loginResult', '', '', 'The ban has ended. New sign-ins are allowed again.');
+    }
     ban = null;
-    card.className = 'panel wide clear';
-    $('banTitle').textContent = 'NOT BANNED — sign-in from ' + c.ip + ' is allowed';
-    fillRows($('banDetails'), [['Checked at', c.checked_at]]);
     timers.forEach(clearTimeout); timers = []; scheduledFor = null;
   }
-  $('count').textContent = sent;
+  renderHero();
 }
 
 function tick() {
-  const el = $('countdown');
-  if (!ban || !el) return;
+  const node = $('countdown');
+  if (!ban || !node) return;
   const ms = Math.max(0, ban.expiresMs - Date.now());
-  el.textContent = Math.ceil(ms / 1000) + ' s  (' + (ms / 1000).toFixed(1) + ')';
+  node.textContent = Math.ceil(ms / 1000) + ' s';
 }
 setInterval(tick, 100);
 
@@ -256,24 +415,23 @@ async function expiryCheck(expiresAt) {
 
 async function attack(times) {
   for (let i = 0; i < times; i++) {
-    const r = await login(ipA(), 'guess-' + Math.random().toString(36).slice(2, 8));
+    const r = await login(ipA(), 'guess-' + Math.random().toString(36).slice(2, 8), attackUser());
     if (r.outcome === 'wrong_password') {
       sent++;
-      result('attackResult', '', 'Failed login #' + sent + ' counted. Sentinel: banned=false.');
+      result('attackResult', '', '', 'Failed login #' + sent + ' counted. Sentinel: banned=false.');
       log('ATTACKER  failed login #' + sent + ' from ' + ipA() + ' → not banned');
     } else if (r.outcome === 'blocked') {
       if (r.ban_triggered) {
         sent++;
-        result('attackResult', 'bad', 'Failed login #' + sent + ' TRIGGERED THE BAN. Sentinel: banned=true, ban_triggered=true.');
+        result('attackResult', 'bad', 'BAN TRIGGERED', 'Failed login #' + sent + ' reached the threshold. Sentinel: banned=true, ban_triggered=true.');
         log('ATTACKER  failed login #' + sent + ' from ' + ipA() + ' → BAN TRIGGERED', 'bad');
       } else {
-        result('attackResult', 'bad', 'BLOCKED — refused before the password was even checked. Not counted.');
+        result('attackResult', 'bad', 'BLOCKED', 'Refused before the password was even checked. Not counted.');
         log('ATTACKER  attempt from ' + ipA() + ' refused: IP is banned (not counted)', 'bad');
       }
-      $('count').textContent = sent;
       break;
     } else {
-      result('attackResult', 'bad', r.message || r.outcome);
+      result('attackResult', 'bad', 'ERROR', r.message || r.outcome);
       break;
     }
     $('count').textContent = sent;
@@ -282,69 +440,97 @@ async function attack(times) {
   refreshAdmin();
 }
 
-/* ---------- LEGITIMATE USER on IP B ---------- */
+// The attacker guesses right before reaching the ban threshold. No ban fires,
+// but Sentinel flags the success because of the failures that preceded it.
+async function luckyGuess() {
+  const r = await login(ipA(), 'correct-password', attackUser());
+  if (r.outcome === 'signed_in' && r.warning) {
+    flag = { count: r.warning.failed_attempts, account: attackUser(), ip: ipA() };
+    recovered = null;
+    result('attackResult', 'warn', 'SIGNED IN — BUT FLAGGED',
+      'Login allowed. It followed ' + r.warning.failed_attempts + ' failed attempts on this account from this address (' + r.warning.code + ').');
+    log('ATTACKER  correct password from ' + ipA() + ' after ' + r.warning.failed_attempts +
+        ' failures → LOGIN ALLOWED, SECURITY ALERT (' + r.warning.code + ')', 'warn');
+  } else if (r.outcome === 'signed_in') {
+    result('attackResult', 'ok', 'SIGNED IN', 'No alert: too few recent failed attempts on this account from this address.');
+    log('ATTACKER  correct password from ' + ipA() + ' → signed in, no alert');
+  } else if (r.outcome === 'wrong_password') {
+    sent++;
+    result('attackResult', '', '', 'Wrong password: the demo portal only has the account "student". Counted as failed login #' + sent + '.');
+  } else if (r.outcome === 'blocked') {
+    result('attackResult', 'bad', 'BLOCKED', 'The address is banned. Even the correct password gets no session.', r.explanation);
+    log('ATTACKER  correct password from ' + ipA() + ' → BLOCKED: IP is banned', 'bad');
+  } else {
+    result('attackResult', 'bad', 'ERROR', r.message || r.outcome);
+  }
+  await refreshBan(true);
+  refreshAdmin();
+}
+
+/* ---------- LEGITIMATE USER on another IP ---------- */
 
 async function signInB() {
   const r = await login(ipB(), 'correct-password');
   if (r.outcome === 'signed_in') {
-    result('legitResult', 'ok', 'SIGNED IN from ' + ipB() + ' — unaffected. Sentinel: banned=false.');
+    result('legitResult', 'ok', 'SIGNED IN — UNAFFECTED', 'From ' + ipB() + '. Sentinel: banned=false.');
     log('LEGITIMATE USER  signed in from ' + ipB() + ' → unaffected', 'ok');
   } else {
-    result('legitResult', 'bad', 'Sign-in refused: ' + (r.message || r.outcome), r.explanation);
+    result('legitResult', 'bad', 'REFUSED', r.message || r.outcome, r.explanation);
     log('LEGITIMATE USER  sign-in from ' + ipB() + ' refused (' + r.outcome + ')', 'bad');
   }
 }
 
 async function checkB() {
   const r = await call('GET', '/api/check?ip=' + encodeURIComponent(ipB()) + '&context=login');
-  if (!r.sentinel.length) { result('legitResult', 'bad', r.message || r.outcome); return; }
+  if (!r.sentinel.length) { result('legitResult', 'bad', 'ERROR', r.message || r.outcome); return; }
   const c = r.sentinel[0].response;
-  result('legitResult', c.allow ? 'ok' : 'bad', 'Check ' + c.ip + ': banned=' + c.banned + ', allow=' + c.allow, c.explanation);
+  result('legitResult', c.allow ? 'ok' : 'bad', c.allow ? 'ALLOWED' : 'BLOCKED',
+    'Check ' + c.ip + ': banned=' + c.banned + ', allow=' + c.allow, c.explanation);
   log('LEGITIMATE USER  check ' + c.ip + ' → banned=' + c.banned + ', allow=' + c.allow, c.allow ? 'ok' : 'bad');
 }
 
-/* ---------- EXISTING SESSION on IP A (Improvement 1) ---------- */
+/* ---------- EXISTING SESSION on the source IP (Improvement 1) ---------- */
 
 async function signInA() {
   const r = await login(ipA(), 'correct-password');
   if (r.outcome === 'signed_in') {
     sessionToken = r.session;
-    result('sessionResult', 'ok', 'Signed in on ' + ipA() + '. The portal now holds a session for "student".');
+    result('sessionResult', 'ok', 'SESSION CREATED', 'Signed in on ' + ipA() + '. The portal now holds a session for "student".');
     log('EXISTING SESSION  student signed in on ' + ipA() + ' (session created by the portal)', 'ok');
   } else if (r.outcome === 'blocked') {
-    result('sessionResult', 'bad', 'Cannot sign in: ' + ipA() + ' is already banned. A session must exist before the ban. ' +
-      (sessionToken ? 'The earlier session is still there — use step 2.' : 'Unban in ADMIN or wait for expiry, then retry.'));
+    result('sessionResult', 'bad', 'BLOCKED', ipA() + ' is already banned. A session must exist before the ban. ' +
+      (sessionToken ? 'The earlier session is still there: use step 2.' : 'Unban in ADMIN or wait for expiry, then retry.'));
     log('EXISTING SESSION  sign-in on ' + ipA() + ' refused: no new session from a banned IP', 'bad');
   } else {
-    result('sessionResult', 'bad', r.message || r.outcome);
+    result('sessionResult', 'bad', 'ERROR', r.message || r.outcome);
   }
 }
 
 async function useSession() {
-  if (!sessionToken) { result('sessionResult', '', 'No session yet. Do step 1 before the attack.'); return; }
+  if (!sessionToken) { result('sessionResult', '', '', 'No session yet. Do step 1 before the attack.'); return; }
   const r = await call('POST', '/api/session', { ip: ipA(), token: sessionToken });
   if (r.outcome === 'allowed') {
     const banned = r.ip_banned === true;
-    result('sessionResult', 'ok', 'ALLOWED — context=session → allow=true' +
+    result('sessionResult', 'ok', 'ALLOWED', 'context=session → allow=true' +
       (banned ? ', while banned=true. The session keeps working; the ban is unchanged.' : ', banned=false.'));
     log('EXISTING SESSION  request from ' + ipA() + ' → ALLOWED (context=session, banned=' + banned + ')', 'ok');
   } else {
-    result('sessionResult', 'bad', r.message || r.outcome);
+    result('sessionResult', 'bad', 'ERROR', r.message || r.outcome);
   }
 }
 
-/* ---------- NEW LOGIN on IP A (Improvement 1 + Improvement 2) ---------- */
+/* ---------- NEW LOGIN on the source IP (Improvement 1 + Improvement 2) ---------- */
 
 async function newLogin() {
   const r = await login(ipA(), 'correct-password');
   if (r.outcome === 'blocked') {
-    result('loginResult', 'bad', 'BLOCKED — context=login → allow=false, even with the correct password. No session created.', r.explanation);
+    result('loginResult', 'bad', 'BLOCKED', 'context=login → allow=false, even with the correct password. No session created.', r.explanation);
     log('NEW LOGIN  from ' + ipA() + ' → BLOCKED (context=login), explanation shown', 'bad');
   } else if (r.outcome === 'signed_in') {
-    result('loginResult', 'ok', 'Signed in — ' + ipA() + ' is not banned.');
+    result('loginResult', 'ok', 'SIGNED IN', ipA() + ' is not banned.');
     log('NEW LOGIN  from ' + ipA() + ' → signed in (IP not banned)', 'ok');
   } else {
-    result('loginResult', 'bad', r.message || r.outcome);
+    result('loginResult', 'bad', 'ERROR', r.message || r.outcome);
   }
 }
 
@@ -356,7 +542,7 @@ async function refreshAdmin() {
   body.replaceChildren();
   const bans = r.sentinel.length ? r.sentinel[0].response.bans : [];
   if (!bans.length) {
-    const row = body.insertRow(), cell = row.insertCell();
+    const cell = body.insertRow().insertCell();
     cell.colSpan = 5; cell.className = 'muted'; cell.textContent = 'No active bans.';
     return;
   }
@@ -364,8 +550,7 @@ async function refreshAdmin() {
     const row = body.insertRow();
     for (const text of [b.ip, b.triggered_at, b.expires_at, b.evidence.length + ' failed logins'])
       row.insertCell().textContent = text;
-    const button = document.createElement('button');
-    button.textContent = 'Unban';
+    const button = el('button', 'small', 'Unban');
     button.onclick = () => unban(b);
     row.insertCell().append(button);
   }
@@ -374,20 +559,23 @@ async function refreshAdmin() {
 async function unban(b) {
   const r = await call('POST', '/api/admin/unban', { id: b.id });
   if (r.outcome === 'ok') log('ADMIN  unbanned ' + b.ip + ' → status=' + r.sentinel[0].response.status, 'ok');
+  unbanning = true;
   await refreshBan(true);
+  unbanning = false;
   refreshAdmin();
 }
 
 /* ---------- simulated IPs ---------- */
 
 $('ipA').addEventListener('change', () => {
-  sent = 0; ban = null; sessionToken = null;
-  result('sessionResult', '', 'No session yet.');
-  log('Simulated IP A is now ' + ipA());
+  sent = 0; ban = null; flag = null; recovered = null; sessionToken = null;
+  result('sessionResult', '', '', 'No session yet.');
+  log('Source IP is now ' + ipA());
   refreshBan(true);
 });
-$('ipB').addEventListener('change', () => log('Simulated IP B is now ' + ipB()));
+$('ipB').addEventListener('change', () => log('Other IP is now ' + ipB()));
 
+renderHero();
 refreshBan(true);
 refreshAdmin();
 </script>

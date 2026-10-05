@@ -154,13 +154,16 @@ class Handler(BaseHTTPRequestHandler):
         ip = _ip(body["ip"])
         # Any timestamp the caller sent is ignored; Sentinel's clock is the only one.
         verdict = self.server.sentinel.report(ip, outcome, username)
-        return {
+        answer = {
             "ip": verdict.ip,
             "banned": verdict.banned,
             "ban_triggered": verdict.ban_triggered,
             "ban": ban_json(verdict.ban, verdict.now_ms, False) if verdict.banned else None,
             "explanation": explanation(verdict.ban, verdict.now_ms),
         }
+        if verdict.warning is not None:  # present only when the alert fires
+            answer["warning"] = verdict.warning
+        return answer
 
     def _check(self, query: dict) -> dict:
         if "ip" not in query:

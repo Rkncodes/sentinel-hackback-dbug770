@@ -54,7 +54,7 @@ The data these components hold is defined in [DATA_MODEL.md](DATA_MODEL.md).
 2. The API validates and normalises the IP and reads "now" from the Clock. This is the attempt's time (D-3).
 3. From here to the end, the work for this IP is atomic (D-6).
 4. The Ban Manager checks whether the IP is banned now. If it is, the report is answered "banned", with the explanation, and nothing is counted. This holds for failures and successes alike.
-5. If the outcome is success, the report is answered "not banned" and nothing is counted.
+5. If the outcome is success, the report is answered "not banned" and nothing is counted. Extension (D-17): if the report names a username, the Detector is asked how many failures for this IP and that username are inside the window; at the alert threshold (5) or above, the answer also carries a warning. The window is only read.
 6. If the outcome is failure, the Detector:
    - removes from this IP's Failure Window every failure received more than 60 seconds before "now",
    - adds this failure,
@@ -117,6 +117,7 @@ The portal must pass the real client IP. If it sits behind a proxy, working out 
 | D-14 | **Logins fail closed; existing sessions fail open.** If Sentinel is unreachable the portal refuses new login attempts and lets existing sessions continue. | An outage must not become a way around a ban. Refusing only new logins keeps the cost of an outage low and matches D-15. |
 | D-15 | **Improvement 1: a ban governs login attempts, not existing sessions.** A `session`-context check is allowed while the IP is banned. It writes nothing and never changes the ban. | Password guessing happens at login. People already signed in behind a shared IP are not the attacker and are not cut off. No new session can be obtained from a banned IP, so there is no bypass. |
 | D-16 | **Improvement 2: every "banned" answer carries an end-user-safe explanation**, derived from the ban record at request time. | The blocked person learns what happened and when it ends, without the portal having to compose it and without exposing evidence. |
+| D-17 | **Extension: success alert.** A successful login that follows repeated failures for the same account from the same IP is answered with a warning. It is advisory: it creates no ban, counts nothing, stores nothing and resets nothing. Added after the specification was finalized ([AGENT_LOG.md](AGENT_LOG.md), Session 5). | A threshold only catches an attacker who keeps failing. A guess that succeeds before the threshold would otherwise pass as an ordinary login. The portal, which owns sessions, decides how to respond. |
 
 ## 5. How the design meets the Killer Tests
 

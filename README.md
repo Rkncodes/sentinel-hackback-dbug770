@@ -51,6 +51,24 @@ A session check never changes the ban, and no new session can be obtained from a
 
 It is derived from the ban at request time and never stored. It contains no usernames, evidence or rule values, and it is `null` whenever the IP is not banned. `retry_after_seconds` is rounded up, so it is at least 1 while the ban is active.
 
+## Extension: the success alert
+
+*Stop the attacker. Spare the bystander. Catch the lucky guess.*
+
+A threshold only catches an attacker who keeps failing. If the right password is guessed on the sixth try, no ban fires. So when a successful login follows repeated failures **for the same account from the same address**, Sentinel adds a `warning` to its answer:
+
+```json
+{
+  "code": "success_after_failed_attempts",
+  "message": "Successful login followed repeated failed attempts from this address.",
+  "failed_attempts": 5
+}
+```
+
+The alert fires at 5 such failures inside the 60-second window (configurable; it must be lower than the ban threshold, and a setting that could never fire is rejected at start-up). It is advisory: nothing is banned, counted, stored or reset, and what to do with it is the portal's decision. Failures for other accounts or from other addresses do not contribute, a report without a username never produces it, and a banned IP still gets the normal "banned" answer. The warning contains no username and no failure history.
+
+This is an extension added on top of the two improvements. It is not the Differentiator, and we make no claim about whether CrowdSec offers something similar; that was not examined.
+
 ## Architecture
 
 ```
@@ -127,12 +145,15 @@ python demo/portal.py
 Open `http://127.0.0.1:8081/` and click in this order:
 
 1. **EXISTING SESSION** → "1. Sign in on IP A (before the attack)".
-2. **ATTACKER** → send failed logins. The 10th triggers the ban; the ban card shows the explanation and a countdown.
-3. **LEGITIMATE USER** → sign in on IP B and check it. Unaffected.
-4. **EXISTING SESSION** → "2. Use the existing session". Allowed while banned.
-5. **NEW LOGIN** → blocked, even with the correct password, with the explanation shown.
-6. Wait for the countdown. The page re-checks just before and at `expires_at`, and the IP becomes unblocked.
-7. **ADMIN** → ban the IP again, then "Unban".
+2. **ATTACKER** → "Send 5 failed logins", then "Guess the correct password". Signed in, with an amber security alert: no ban fired, but the success is flagged.
+3. **ATTACKER** → "Send 5 failed logins" again. The success reset nothing, so the 10th failure triggers the ban; the ban card shows the explanation and a countdown.
+4. **LEGITIMATE USER** → sign in on IP B and check it. Unaffected.
+5. **EXISTING SESSION** → "2. Use the existing session". Allowed while banned.
+6. **NEW LOGIN** → blocked, even with the correct password, with the explanation shown.
+7. Wait for the countdown. The page re-checks just before and at `expires_at`, and the IP becomes unblocked.
+8. **ADMIN** → ban the IP again, then "Unban".
+
+Do steps 2 and 3 within 60 seconds of each other, or the first failures leave the window. Before starting, make sure no older Sentinel is still running on port 8080.
 
 The client IPs are simulated: the page sends whatever is typed in the two IP fields. The demo portal has no authentication of its own, has one hardcoded account, and binds to `127.0.0.1` only. It is for demonstration, not deployment.
 
@@ -142,7 +163,7 @@ The client IPs are simulated: the page sends whatever is typed in the two IP fie
 python -m unittest discover -s tests -t . -v
 ```
 
-76 tests. `python -m unittest` runs the same suite.
+104 tests. `python -m unittest` runs the same suite.
 
 | File | Tests | Covers |
 |---|---|---|
@@ -151,7 +172,8 @@ python -m unittest discover -s tests -t . -v
 | [tests/test_api.py](tests/test_api.py) | 21 | Keys (401/403), validation and error codes, response shapes, evidence visibility |
 | [tests/test_improvement1.py](tests/test_improvement1.py) | 8 | Session checks allowed, new logins blocked, no bypass, ban unchanged |
 | [tests/test_improvement2.py](tests/test_improvement2.py) | 10 | Explanation contents, rounding, exact disappearance at expiry, nothing leaked |
-| [tests/test_demo.py](tests/test_demo.py) | 5 | The demo portal against a real Sentinel with the real clock and a 3-second ban |
+| [tests/test_success_alert.py](tests/test_success_alert.py) | 27 | Extension: alert at the threshold, per account and per address, window boundary, nothing changed or leaked |
+| [tests/test_demo.py](tests/test_demo.py) | 6 | The demo portal against a real Sentinel with the real clock and a 3-second ban |
 
 ## Repository structure
 
