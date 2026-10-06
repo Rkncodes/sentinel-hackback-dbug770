@@ -133,6 +133,13 @@ class Portal:
         return self._passthrough(lambda: self.client.call(
             "GET", "/v1/bans?status=active", self.client.admin_key))
 
+    def admin_ban_history(self, ip: str) -> dict:
+        # Every status for this one address: the full audit trail already kept by
+        # the Ban Store (GET /v1/bans?ip=... with no status filter means "all").
+        query = urlencode({"ip": ip})
+        return self._passthrough(lambda: self.client.call(
+            "GET", f"/v1/bans?{query}", self.client.admin_key))
+
     def admin_unban(self, ban_id: str) -> dict:
         return self._passthrough(lambda: self.client.call(
             "DELETE", f"/v1/bans/{ban_id}", self.client.admin_key))
@@ -180,6 +187,8 @@ class Handler(BaseHTTPRequestHandler):
             self._json(portal.status(query.get("ip", ""), query.get("context", "login")))
         elif url.path == "/api/admin/bans":
             self._json(portal.admin_bans())
+        elif url.path == "/api/admin/ban-history":
+            self._json(portal.admin_ban_history(query.get("ip", "")))
         else:
             self._json({"outcome": "error", "message": "not found"}, 404)
 

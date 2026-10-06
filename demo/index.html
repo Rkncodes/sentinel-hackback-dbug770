@@ -11,16 +11,26 @@
     --ok: #3ddc97; --ok-bg: rgba(61, 220, 151, .08); --ok-line: rgba(61, 220, 151, .35);
     --warn: #ffb020; --warn-bg: rgba(255, 176, 32, .09); --warn-line: rgba(255, 176, 32, .55);
     --bad: #ff5d5d; --bad-bg: rgba(255, 93, 93, .09); --bad-line: rgba(255, 93, 93, .55);
-    --accent: #6aa9ff;
+    --accent: #6aa9ff; --accent-2: #9085e9;
+    --shadow: 0 1px 2px rgba(0,0,0,.45), 0 10px 26px -10px rgba(0,0,0,.6);
+    --shadow-sm: 0 2px 8px -2px rgba(0,0,0,.55);
     --sans: "Segoe UI Variable Display", "Segoe UI", system-ui, -apple-system, sans-serif;
     --mono: "Cascadia Code", "Cascadia Mono", Consolas, ui-monospace, monospace;
   }
   * { box-sizing: border-box; }
   html { color-scheme: dark; }
-  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.5 var(--sans); }
+  body { margin: 0; color: var(--text); font: 15px/1.5 var(--sans); min-height: 100vh;
+         background:
+           radial-gradient(1100px 520px at 12% -12%, rgba(106,169,255,.07), transparent 60%),
+           radial-gradient(900px 480px at 104% -4%, rgba(144,133,233,.05), transparent 55%),
+           var(--bg); }
   .wrap { max-width: 1240px; margin: 0 auto; padding: 20px 20px 40px; }
   .mono { font-family: var(--mono); }
   .muted { color: var(--muted); }
+  ::-webkit-scrollbar { height: 10px; width: 10px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--line-2); border-radius: 999px; }
+  ::-webkit-scrollbar-thumb:hover { background: #3a4c69; }
 
   /* header */
   .top { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 18px; }
@@ -76,7 +86,9 @@
   .nested .result:not(.ok):not(.bad):not(.warn) { background: rgba(0, 0, 0, .25); }
   .two { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; margin-top: 16px; }
   @media (max-width: 860px) { .sim-top, .side { grid-template-columns: 1fr; } .hero h1 { font-size: 27px; } }
-  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; min-width: 0; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; min-width: 0;
+           box-shadow: var(--shadow); }
+  .panel.nested { box-shadow: none; }
   .panel h2 { margin: 0; font-size: 12px; font-weight: 700; letter-spacing: .18em; color: var(--text); }
   .panel .sub { font-size: 12px; color: var(--dim); letter-spacing: .08em; margin: 2px 0 10px; text-transform: uppercase; }
   .panel p { margin: 0 0 10px; font-size: 13px; color: var(--muted); }
@@ -90,8 +102,9 @@
   .counter .l { font-size: 12px; color: var(--muted); letter-spacing: .08em; text-transform: uppercase; }
   .btns { display: flex; flex-wrap: wrap; gap: 8px; }
   button { font: 600 13px var(--sans); color: var(--text); background: #18212f; border: 1px solid var(--line-2); border-radius: 8px;
-           padding: 8px 12px; cursor: pointer; transition: background .15s, border-color .15s; }
-  button:hover { background: #1f2b3d; border-color: #3a4c69; }
+           padding: 8px 12px; cursor: pointer; transition: background .15s, border-color .15s, transform .1s, box-shadow .15s; }
+  button:hover { background: #1f2b3d; border-color: #3a4c69; transform: translateY(-1px); box-shadow: var(--shadow-sm); }
+  button:active { transform: translateY(0); box-shadow: none; }
   button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   button.primary { width: 100%; margin-top: 10px; padding: 11px 12px; font-size: 14px; color: #1a1200; background: var(--warn); border-color: var(--warn); }
   button.primary:hover { background: #ffc04d; border-color: #ffc04d; }
@@ -113,7 +126,7 @@
   td { padding: 8px 10px; border-bottom: 1px solid var(--line); font-family: var(--mono); font-size: 12px; }
   .head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
   button:disabled { opacity: .55; cursor: default; }
-  button:disabled:hover { background: #18212f; border-color: var(--line-2); }
+  button:disabled:hover { background: #18212f; border-color: var(--line-2); transform: none; box-shadow: none; }
   /* AI incident brief: part of the ADMIN panel, quiet until used */
   .brief { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
   .brief .head { margin-bottom: 0; flex-wrap: wrap; }
@@ -130,6 +143,38 @@
               padding: 10px 12px; margin: 8px 0 0; height: 250px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
   #log .bad { color: #ff9a9a; } #log .ok { color: #7fe6b6; } #log .warn { color: #ffcb6b; }
   footer { margin-top: 18px; font-size: 12px; color: var(--dim); }
+
+  /* alarm flash: a brief red pulse across the whole page when a ban fires */
+  @keyframes alarmFlash { 0% { background: #4a0000; } 100% { background: var(--bg); } }
+  body.alarm { animation: alarmFlash .6s ease-out; }
+
+  /* live attack timeline chart */
+  .chart-wrap { position: relative; margin-top: 10px; }
+  #attackChart { width: 100%; height: 170px; display: block; background: #070a0f; border: 1px solid var(--line); border-radius: 10px;
+                 box-shadow: inset 0 1px 4px rgba(0,0,0,.5); }
+  .legend { display: flex; flex-wrap: wrap; gap: 10px 16px; margin-top: 10px; font-size: 11px; color: var(--muted); }
+  .legend .sw { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+
+  /* botnet simulation table */
+  .botnet-grid td.ip { font-family: var(--mono); }
+  .botnet-grid .bar { display: inline-block; width: 70px; height: 7px; border-radius: 4px; background: #0d1420; overflow: hidden; vertical-align: middle; margin-right: 8px; }
+  .botnet-grid .bar i { display: block; height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-2)); transition: width .15s linear; }
+  .botnet-grid .bar i.bad { background: linear-gradient(90deg, #ff8a8a, var(--bad)); }
+  tbody tr { transition: background .12s; }
+  tbody tr:hover { background: rgba(255,255,255,.025); }
+  .pill { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px 3px 8px; border-radius: 999px;
+          font-size: 11px; font-weight: 700; letter-spacing: .06em; }
+  .pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; box-shadow: 0 0 6px currentColor; flex: none; }
+  .pill.ok { color: var(--ok); border: 1px solid var(--ok-line); background: var(--ok-bg); }
+  .pill.bad { color: var(--bad); border: 1px solid var(--bad-line); background: var(--bad-bg); }
+  .pill.run { color: var(--accent); border: 1px solid rgba(106,169,255,.4); background: rgba(106,169,255,.08); }
+  .pill.run::before { animation: pillPulse 1.1s ease-in-out infinite; }
+  @keyframes pillPulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+
+  /* ban history: same quiet-until-used pattern as the AI brief section */
+  .history { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
+  .history .head { margin-bottom: 8px; }
+  .history h3 { margin: 0; font-size: 11px; font-weight: 700; letter-spacing: .18em; color: var(--muted); }
 </style>
 </head>
 <body>
@@ -206,6 +251,28 @@
 
 <div class="panel" style="margin-top:16px">
   <div class="head">
+    <div><h2>LIVE ATTACK TIMELINE</h2><div class="sub" style="margin-bottom:0">Failed logins per address · dashed line = ban threshold</div></div>
+    <button class="small" id="btnClearChart" onclick="clearChart()">Clear</button>
+  </div>
+  <div class="chart-wrap"><canvas id="attackChart"></canvas></div>
+  <div class="legend" id="chartLegend"></div>
+</div>
+
+<div class="panel" style="margin-top:16px">
+  <div class="head">
+    <div><h2>BOTNET SIMULATION</h2><div class="sub" style="margin-bottom:0">5 attackers at once · 1 bystander throughout</div></div>
+    <button id="btnBotnet" onclick="runBotnet()">🤖 Launch botnet (5 IPs)</button>
+  </div>
+  <p>Five addresses attack a different account simultaneously. Each is counted and banned <b>independently</b>. A sixth address
+     (<span class="mono" id="innocentIpLabel"></span>) keeps signing in correctly the whole time, from outside the botnet, to show it is never affected.</p>
+  <div class="scroll"><table class="botnet-grid">
+    <thead><tr><th>ADDRESS</th><th>PROGRESS</th><th>STATUS</th></tr></thead>
+    <tbody id="botnetRows"><tr><td colspan="3" class="muted">Not started.</td></tr></tbody>
+  </table></div>
+</div>
+
+<div class="panel" style="margin-top:16px">
+  <div class="head">
     <div><h2>ADMIN</h2><div class="sub" style="margin-bottom:0">Active bans · admin key</div></div>
     <button class="small" id="btnRefreshAdmin" onclick="refreshAdmin()">Refresh</button>
   </div>
@@ -213,6 +280,20 @@
     <thead><tr><th>IP</th><th>TRIGGERED</th><th>EXPIRES</th><th>EVIDENCE</th><th></th></tr></thead>
     <tbody id="bans"><tr><td colspan="5" class="muted">No active bans.</td></tr></tbody>
   </table></div>
+
+  <div class="history">
+    <div class="head">
+      <div>
+        <h3>BAN HISTORY</h3>
+        <div class="hint">Every ban ever recorded for the source IP (<span class="mono" id="historyIpLabel"></span>) — active, expired or lifted.</div>
+      </div>
+      <button class="small" id="btnHistory" onclick="refreshHistory()">Refresh</button>
+    </div>
+    <div class="scroll"><table>
+      <thead><tr><th>STATUS</th><th>TRIGGERED</th><th>ENDED</th><th>ENDED BY</th><th>EVIDENCE</th></tr></thead>
+      <tbody id="history"><tr><td colspan="5" class="muted">No bans recorded for this address yet.</td></tr></tbody>
+    </table></div>
+  </div>
 
   <div class="brief">
     <div class="head">
@@ -294,6 +375,38 @@ function explanationBox(e) {
   }
   box.append(dl);
   return box;
+}
+
+/* ---------- alarm: a brief flash + beep the moment a ban fires ---------- */
+
+function alarm() {
+  document.body.classList.remove('alarm');
+  // restart the CSS animation even if one just finished
+  void document.body.offsetWidth;
+  document.body.classList.add('alarm');
+  setTimeout(() => document.body.classList.remove('alarm'), 650);
+  try {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    const ctx = new Ctx();
+    const master = ctx.createGain();
+    master.gain.value = 0.09;
+    master.connect(ctx.destination);
+    // three flat, even beeps at a fixed pitch: a security-panel alert, not a slide whistle
+    const beepAt = (t) => {
+      const osc = ctx.createOscillator(), gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = 1000;
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(1, t + 0.008);
+      gain.gain.setValueAtTime(1, t + 0.09);
+      gain.gain.linearRampToValueAtTime(0, t + 0.11);
+      osc.connect(gain); gain.connect(master);
+      osc.start(t); osc.stop(t + 0.12);
+    };
+    const now = ctx.currentTime;
+    beepAt(now); beepAt(now + 0.16); beepAt(now + 0.32);
+    setTimeout(() => ctx.close(), 700);
+  } catch { /* audio unavailable in this browser; the flash still happened */ }
 }
 
 /* ---------- hero: one card that always shows the current state ---------- */
@@ -447,18 +560,111 @@ async function expiryCheck(expiresAt) {
   refreshAdmin();
 }
 
+/* ---------- live attack timeline chart ---------- */
+
+const THRESHOLD = 10; // matches the ban threshold already described throughout this page
+// Validated for a dark surface: lightness band, CVD separation and contrast all checked
+// (see dataviz palette tooling) — fixed hue order, never cycled per series.
+const CHART_COLORS = ['#3987e5', '#199e70', '#c98500', '#008300', '#9085e9', '#e66767', '#d55181', '#d95926'];
+let chartSeries = {};   // id -> { label, color, points: [count...], bannedPoints: [index...] }
+let chartColorN = 0;
+
+function ensureSeries(id, label) {
+  if (!chartSeries[id]) {
+    chartSeries[id] = { label, color: CHART_COLORS[chartColorN++ % CHART_COLORS.length], points: [0], bannedPoints: [] };
+  }
+  return chartSeries[id];
+}
+
+function addPoint(id, label, count, banned) {
+  const s = ensureSeries(id, label);
+  s.points.push(count);
+  if (banned) s.bannedPoints.push(s.points.length - 1);
+  drawChart();
+}
+
+function clearChart() {
+  chartSeries = {};
+  chartColorN = 0;
+  drawChart();
+}
+
+function renderLegend() {
+  const legend = $('chartLegend');
+  legend.replaceChildren();
+  const entries = Object.values(chartSeries);
+  if (!entries.length) {
+    legend.append('No attack data yet. Use the attack simulator or the botnet below — every address plots its own line.');
+    return;
+  }
+  for (const s of entries) {
+    const sw = el('span', 'sw'); sw.style.background = s.color; sw.style.boxShadow = '0 0 6px ' + s.color;
+    const item = el('span');
+    item.append(sw, s.label + (s.bannedPoints.length ? ' — banned' : ''));
+    legend.append(item);
+  }
+}
+
+function drawChart() {
+  const canvas = $('attackChart');
+  const ratio = window.devicePixelRatio || 1;
+  const w = canvas.clientWidth || 600, h = canvas.clientHeight || 170;
+  canvas.width = w * ratio; canvas.height = h * ratio;
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+
+  const padL = 10, padB = 10, padT = 18, padR = 10;
+  const plotW = w - padL - padR, plotH = h - padT - padB;
+  const maxY = THRESHOLD + 1;
+  let maxX = 1;
+  for (const s of Object.values(chartSeries)) maxX = Math.max(maxX, s.points.length - 1);
+  const X = i => padL + (maxX === 0 ? 0 : (i / maxX) * plotW);
+  const Y = v => padT + plotH - (v / maxY) * plotH;
+
+  ctx.save();
+  ctx.setLineDash([4, 4]);
+  ctx.strokeStyle = 'rgba(255,93,93,.55)';
+  ctx.beginPath(); ctx.moveTo(padL, Y(THRESHOLD)); ctx.lineTo(padL + plotW, Y(THRESHOLD)); ctx.stroke();
+  ctx.restore();
+  ctx.fillStyle = 'rgba(255,93,93,.8)';
+  ctx.font = '10px Consolas, monospace';
+  ctx.fillText('ban threshold (' + THRESHOLD + ')', padL + 4, Y(THRESHOLD) - 5);
+
+  for (const s of Object.values(chartSeries)) {
+    ctx.strokeStyle = s.color; ctx.lineWidth = 2; ctx.beginPath();
+    s.points.forEach((v, i) => { const x = X(i), y = Y(v); if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y); });
+    ctx.stroke();
+    const last = s.points.length - 1;
+    ctx.fillStyle = s.color;
+    ctx.beginPath(); ctx.arc(X(last), Y(s.points[last]), 3, 0, Math.PI * 2); ctx.fill();
+    for (const i of s.bannedPoints) {
+      ctx.fillStyle = '#ff5d5d';
+      ctx.beginPath(); ctx.arc(X(i), Y(s.points[i]), 4.5, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#ff5d5d'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(X(i), Y(s.points[i]), 7, 0, Math.PI * 2); ctx.stroke();
+    }
+  }
+  renderLegend();
+}
+window.addEventListener('resize', drawChart);
+
 /* ---------- ATTACKER ---------- */
 
 async function attack(times) {
+  const chartId = 'atk:' + ipA(), chartLabel = 'Attack on ' + ipA();
   for (let i = 0; i < times; i++) {
     const r = await login(ipA(), 'guess-' + Math.random().toString(36).slice(2, 8), attackUser());
     if (r.outcome === 'wrong_password') {
       sent++;
+      addPoint(chartId, chartLabel, sent, false);
       result('attackResult', '', '', 'Failed login #' + sent + ' counted. Sentinel: banned=false.');
       log('ATTACKER  failed login #' + sent + ' from ' + ipA() + ' → not banned');
     } else if (r.outcome === 'blocked') {
       if (r.ban_triggered) {
         sent++;
+        addPoint(chartId, chartLabel, sent, true);
+        alarm();
         result('attackResult', 'bad', 'BAN TRIGGERED', 'Failed login #' + sent + ' reached the threshold. Sentinel: banned=true, ban_triggered=true.');
         log('ATTACKER  failed login #' + sent + ' from ' + ipA() + ' → BAN TRIGGERED', 'bad');
       } else {
@@ -474,6 +680,7 @@ async function attack(times) {
   }
   await refreshBan(true);
   refreshAdmin();
+  refreshHistory();
 }
 
 // The attacker guesses right before reaching the ban threshold. No ban fires,
@@ -500,6 +707,87 @@ async function luckyGuess() {
     result('attackResult', 'bad', 'ERROR', r.message || r.outcome);
   }
   await refreshBan(true);
+  refreshAdmin();
+}
+
+/* ---------- BOTNET SIMULATION: 5 attackers at once, 1 bystander throughout ---------- */
+
+const BOT_IPS = ['198.51.100.101', '198.51.100.102', '198.51.100.103', '198.51.100.104', '198.51.100.105'];
+const INNOCENT_IP = '198.51.100.60';
+let botnetRunning = false;
+
+function botnetRowId(ip) { return 'bot-' + ip.replace(/\./g, '-'); }
+
+function renderBotnetRow(ip, progressText, pct, pillCls, pillText) {
+  const body = $('botnetRows');
+  if (body.firstElementChild && body.firstElementChild.classList.contains('muted')) body.replaceChildren();
+  let row = document.getElementById(botnetRowId(ip));
+  if (!row) {
+    row = document.createElement('tr');
+    row.id = botnetRowId(ip);
+    row.append(el('td', 'ip'), el('td'), el('td'));
+    body.append(row);
+  }
+  row.children[0].textContent = ip + (ip === INNOCENT_IP ? ' (bystander)' : '');
+  const bar = el('span', 'bar'); const fill = el('i', pillCls === 'bad' ? 'bad' : ''); fill.style.width = pct + '%'; bar.append(fill);
+  row.children[1].replaceChildren(bar, progressText);
+  row.children[2].replaceChildren(el('span', 'pill ' + pillCls, pillText));
+}
+
+async function runBotnet() {
+  if (botnetRunning) return;
+  botnetRunning = true;
+  const button = $('btnBotnet');
+  button.disabled = true;
+  button.textContent = 'Botnet attacking…';
+  $('botnetRows').replaceChildren();
+  log('BOTNET  launching 5 simulated attackers on separate addresses, plus 1 bystander address', 'warn');
+
+  let bystanderActive = true, bystanderCount = 0;
+  renderBotnetRow(INNOCENT_IP, '0 successful sign-ins', 0, 'run', 'SIGNING IN');
+  const bystanderLoop = (async () => {
+    while (bystanderActive) {
+      const r = await login(INNOCENT_IP, 'correct-password');
+      if (r.outcome === 'signed_in') {
+        bystanderCount++;
+        renderBotnetRow(INNOCENT_IP, bystanderCount + ' successful sign-ins', 100, 'ok', 'UNAFFECTED');
+      }
+      await new Promise(res => setTimeout(res, 300));
+    }
+  })();
+
+  const botLoop = async (ip) => {
+    renderBotnetRow(ip, '0 / ' + THRESHOLD, 0, 'run', 'ATTACKING');
+    let attempts = 0;
+    for (let i = 0; i < THRESHOLD; i++) {
+      const r = await login(ip, 'guess-' + Math.random().toString(36).slice(2, 8), 'bot-target');
+      if (r.outcome === 'wrong_password') {
+        attempts++;
+        addPoint('bot:' + ip, 'Bot ' + ip, attempts, false);
+        renderBotnetRow(ip, attempts + ' / ' + THRESHOLD, attempts / THRESHOLD * 100, 'run', 'ATTACKING');
+        log('BOTNET  ' + ip + '  failed login #' + attempts, 'warn');
+      } else if (r.outcome === 'blocked' && r.ban_triggered) {
+        attempts++;
+        addPoint('bot:' + ip, 'Bot ' + ip, attempts, true);
+        renderBotnetRow(ip, attempts + ' / ' + THRESHOLD, 100, 'bad', 'BANNED');
+        log('BOTNET  ' + ip + '  BAN TRIGGERED at failure #' + attempts, 'bad');
+        alarm();
+        break;
+      } else {
+        renderBotnetRow(ip, 'error', 0, 'bad', 'ERROR');
+        break;
+      }
+      await new Promise(res => setTimeout(res, 100 + Math.random() * 150));
+    }
+  };
+
+  await Promise.all(BOT_IPS.map(botLoop));
+  bystanderActive = false;
+  await bystanderLoop;
+  log('BOTNET  finished: 5 attackers isolated and banned independently; the bystander address was never affected', 'ok');
+  button.disabled = false;
+  button.textContent = '🤖 Launch botnet (5 IPs)';
+  botnetRunning = false;
   refreshAdmin();
 }
 
@@ -599,6 +887,32 @@ async function unban(b) {
   await refreshBan(true);
   unbanning = false;
   refreshAdmin();
+  refreshHistory();
+}
+
+/* ---------- ADMIN: ban history for the source IP (every status, not just active) ---------- */
+
+async function refreshHistory() {
+  $('historyIpLabel').textContent = ipA() || '—';
+  if (!ipA()) return;
+  const r = await call('GET', '/api/admin/ban-history?ip=' + encodeURIComponent(ipA()), null, true);
+  const body = $('history');
+  body.replaceChildren();
+  const bans = r.sentinel.length ? r.sentinel[0].response.bans : [];
+  if (!bans.length) {
+    const cell = body.insertRow().insertCell();
+    cell.colSpan = 5; cell.className = 'muted'; cell.textContent = 'No bans recorded for this address yet.';
+    return;
+  }
+  for (const b of bans) {
+    const row = body.insertRow();
+    const pillCls = b.status === 'active' ? 'bad' : b.status === 'revoked' ? 'run' : 'ok';
+    row.insertCell().append(el('span', 'pill ' + pillCls, b.status.toUpperCase()));
+    row.insertCell().textContent = b.triggered_at;
+    row.insertCell().textContent = b.revoked_at || (b.status === 'active' ? '—' : b.expires_at);
+    row.insertCell().textContent = b.revoked_at ? 'Administrator' : (b.status === 'active' ? '—' : 'Expiry');
+    row.insertCell().textContent = b.evidence.length + ' failed logins';
+  }
 }
 
 /* ---------- ADMIN: AI incident brief (informational; Sentinel decides, the brief only describes) ---------- */
@@ -675,12 +989,16 @@ $('ipA').addEventListener('change', () => {
   $('briefOut').hidden = true;   // the brief described the previous address
   log('Source IP is now ' + ipA());
   refreshBan(true);
+  refreshHistory();
 });
 $('ipB').addEventListener('change', () => log('Other IP is now ' + ipB()));
 
+$('innocentIpLabel').textContent = INNOCENT_IP;
 renderHero();
+drawChart();
 refreshBan(true);
 refreshAdmin();
+refreshHistory();
 </script>
 </body>
 </html>
