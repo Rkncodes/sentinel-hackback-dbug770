@@ -261,7 +261,7 @@
 <div class="panel" style="margin-top:16px">
   <div class="head">
     <div><h2>BOTNET SIMULATION</h2><div class="sub" style="margin-bottom:0">5 attackers at once · 1 bystander throughout</div></div>
-    <button id="btnBotnet" onclick="runBotnet()">🤖 Launch botnet (5 IPs)</button>
+    <button id="btnBotnet" onclick="runBotnet()">Launch botnet (5 IPs)</button>
   </div>
   <p>Five addresses attack a different account simultaneously. Each is counted and banned <b>independently</b>. A sixth address
      (<span class="mono" id="innocentIpLabel"></span>) keeps signing in correctly the whole time, from outside the botnet, to show it is never affected.</p>
@@ -786,7 +786,7 @@ async function runBotnet() {
   await bystanderLoop;
   log('BOTNET  finished: 5 attackers isolated and banned independently; the bystander address was never affected', 'ok');
   button.disabled = false;
-  button.textContent = '🤖 Launch botnet (5 IPs)';
+  button.textContent = 'Launch botnet (5 IPs)';
   botnetRunning = false;
   refreshAdmin();
 }
